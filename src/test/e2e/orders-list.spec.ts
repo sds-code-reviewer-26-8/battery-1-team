@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { login, apiLogin, createOrder, changeStatus } from './helpers';
+import { login, apiLogin, createOrder, changeStatus } from './order-helpers';
 
 const STATUS_LABELS = ['확정', '진행', '완료', '취소'];
 

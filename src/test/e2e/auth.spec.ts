@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login } from './helpers';
+import { login } from './order-helpers';
 
 // AUTH-02 정상 로그인
 test.describe('AUTH-02 정상 로그인', () => {

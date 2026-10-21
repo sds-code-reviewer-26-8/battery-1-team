@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { apiLogin, EVEN_ORDERS } from './helpers';
+import { apiLogin, EVEN_ORDERS } from './order-helpers';
 
 // API-01 시뮬레이션 응답 구조 (마스터 초기값 기준)
 test.describe('API-01 시뮬레이션 응답 구조', () => {
