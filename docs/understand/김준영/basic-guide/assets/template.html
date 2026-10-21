@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{문서 제목}}</title>
+<style>
+  :root { --bg:#f7f8fa; --card:#fff; --text:#1f2933; --sub:#616e7c; --line:#d9dee4; --accent:#2563eb; --ok:#15803d; --bad:#b91c1c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12161c; --card:#1b222b; --text:#e6e9ed; --sub:#9aa5b1; --line:#2f3946; --accent:#60a5fa; --ok:#4ade80; --bad:#f87171; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.7 system-ui,"Noto Sans KR",sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:1.4rem; margin:0 0 4px; }
+  .lead { color:var(--sub); margin:0 0 20px; }
+  [role=tablist] { display:flex; gap:8px; margin-bottom:16px; }
+  [role=tab] { flex:1; padding:10px 8px; border:1px solid var(--line); background:var(--card); color:var(--text);
+    border-radius:8px; font:inherit; cursor:pointer; }
+  [role=tab][aria-selected=true] { border-color:var(--accent); color:var(--accent); font-weight:700; }
+  [role=tabpanel] { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; }
+  [role=tabpanel][hidden] { display:none; }
+  h2 { font-size:1.15rem; margin:0 0 12px; }
+  button.btn { padding:8px 14px; border:1px solid var(--accent); background:transparent; color:var(--accent);
+    border-radius:8px; font:inherit; cursor:pointer; }
+  button.btn:disabled { opacity:.35; cursor:not-allowed; }
+  button.btn.primary { background:var(--accent); color:#fff; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:12px 0; }
+  .card { text-align:left; border:1px solid var(--line); background:var(--bg); color:var(--text); border-radius:10px;
+    padding:12px; font:inherit; cursor:pointer; }
+  .card .more { display:none; margin-top:6px; color:var(--sub); font-size:.92rem; }
+  .card[aria-expanded=true] { border-color:var(--accent); }
+  .card[aria-expanded=true] .more { display:block; }
+  .step-box { border:1px dashed var(--line); border-radius:10px; padding:16px; min-height:96px; margin:12px 0; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0; }
+  .pill { display:inline-block; padding:2px 12px; border-radius:999px; background:var(--accent); color:#fff; }
+  label.slide { display:grid; grid-template-columns:90px 1fr 90px; gap:8px; align-items:center; margin:6px 0; }
+  .result { margin-top:12px; padding:12px; border-radius:10px; background:var(--bg); }
+  .note { color:var(--sub); font-size:.88rem; }
+  .quiz .opt { display:block; width:100%; text-align:left; margin:6px 0; padding:10px; border:1px solid var(--line);
+    background:var(--bg); color:var(--text); border-radius:8px; font:inherit; cursor:pointer; }
+  .quiz .opt.right { border-color:var(--ok); } .quiz .opt.wrong { border-color:var(--bad); }
+  .explain { display:none; color:var(--sub); font-size:.92rem; } .explain.show { display:block; }
+  .next { margin-top:16px; text-align:right; }
+</style>
+</head>
+<body>
+<main>
+  <h1>{{문서 제목}}</h1>
+  <p class="lead">{{한 줄 소개 — 탭을 차례로 눌러 보세요}}</p>
+
+  <div role="tablist" aria-label="이해 단계">
+    <button role="tab" id="tab-1" aria-controls="panel-1" aria-selected="true">1. 큰 그림</button>
+    <button role="tab" id="tab-2" aria-controls="panel-2" aria-selected="false">2. 사용 흐름</button>
+    <button role="tab" id="tab-3" aria-controls="panel-3" aria-selected="false">3. 계산 원리</button>
+  </div>
+
+  <!-- 탭 1: 큰 그림 -->
+  <section role="tabpanel" id="panel-1" aria-labelledby="tab-1">
+    <h2>{{탭 1 질문에 대한 답: 한 문장 목적}}</h2>
+    <p>{{비유 한두 문장}}</p>
+    <div class="cards">
+      <!-- 등장인물마다 반복 -->
+      <button class="card" data-card aria-expanded="false"><strong>{{이름}}</strong><span class="more">{{한 줄 설명}}</span></button>
+    </div>
+    <div class="next"><button class="btn primary" data-goto="2">다음: 사용 흐름 →</button></div>
+  </section>
+
+  <!-- 탭 2: 사용 흐름 -->
+  <section role="tabpanel" id="panel-2" aria-labelledby="tab-2" hidden>
+    <h2>{{사람이 하는 일 한 문장}}</h2>
+    <div class="row"><span class="pill" id="step-label"></span></div>
+    <div class="step-box" id="step-box"></div>
+    <div class="row">
+      <button class="btn" id="step-prev">← 이전</button>
+      <button class="btn" id="step-next">다음 →</button>
+    </div>
+    <h2 style="margin-top:24px">주문 상태 체험</h2>
+    <div class="row">현재 상태: <span class="pill" id="status-now"></span></div>
+    <div class="row" id="status-buttons"></div>
+    <p class="note">누를 수 있는 버튼은 지금 상태에서 바꿀 수 있는 것만 켜집니다.</p>
+    <div class="next"><button class="btn primary" data-goto="3">다음: 계산 원리 →</button></div>
+  </section>
+
+  <!-- 탭 3: 계산 원리 -->
+  <section role="tabpanel" id="panel-3" aria-labelledby="tab-3" hidden>
+    <h2>{{핵심 규칙 한 문장}}</h2>
+    <ul>
+      <li>{{규칙 1}}</li>
+      <li>{{규칙 2}}</li>
+      <li>{{규칙 3}}</li>
+    </ul>
+    <h2>직접 해 보기</h2>
+    <div id="calc"></div>
+    <div class="result" id="calc-result"></div>
+    <p class="note">간이 예시입니다. 실제 계산은 더 많은 조건을 함께 따집니다.</p>
+    <h2 style="margin-top:24px">확인 퀴즈</h2>
+    <div id="quiz"></div>
+  </section>
+</main>
+
+<script>
+// ===== 내용 데이터 (스킬이 채우는 부분) =====
+const STEPS = [
+  // { title: "{{단계 이름}}", text: "{{한두 줄 설명}}" }
+];
+// 상태 체험: 상태별로 바꿀 수 있는 다음 상태 (현재 코드의 규칙을 따른다)
+const STATUS = {
+  start: "{{처음 상태}}",
+  next: {
+    // "{{상태}}": ["{{갈 수 있는 상태}}", ...]
+  }
+};
+// 계산기: 항목별 한도(limit)와 슬라이더 범위, 천 개당 아닌 개당 원가(cost, 원). 값은 코드의 현재 기본값을 쓴다.
+const CALC = [
+  // { name: "{{나라}}", limit: 0, max: 0, step: 0, cost: 0 }
+];
+const QUIZ = [
+  // { q: "{{질문}}", options: ["{{보기}}", ...], answer: 0, why: "{{해설}}" }
+];
+
+// ===== 탭 전환 =====
+const tabs = [...document.querySelectorAll('[role=tab]')];
+function showTab(n) {
+  tabs.forEach((t, i) => {
+    const on = i === n - 1;
+    t.setAttribute('aria-selected', on);
+    document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+  });
+  window.scrollTo({ top: 0 });
+}
+tabs.forEach((t, i) => t.addEventListener('click', () => showTab(i + 1)));
+document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => showTab(+b.dataset.goto)));
+
+// ===== 탭 1: 카드 =====
+document.querySelectorAll('[data-card]').forEach(c => c.addEventListener('click', () =>
+  c.setAttribute('aria-expanded', c.getAttribute('aria-expanded') !== 'true')));
+
+// ===== 탭 2: 단계 이동 =====
+let step = 0;
+function renderStep() {
+  const s = STEPS[step];
+  document.getElementById('step-label').textContent = s ? `${step + 1} / ${STEPS.length}  ${s.title}` : '';
+  document.getElementById('step-box').textContent = s ? s.text : '';
+  document.getElementById('step-prev').disabled = step === 0;
+  document.getElementById('step-next').disabled = step >= STEPS.length - 1;
+}
+document.getElementById('step-prev').onclick = () => { step--; renderStep(); };
+document.getElementById('step-next').onclick = () => { step++; renderStep(); };
+renderStep();
+
+// ===== 탭 2: 상태 체험 =====
+let status = STATUS.start;
+function renderStatus() {
+  document.getElementById('status-now').textContent = status;
+  const box = document.getElementById('status-buttons');
+  box.replaceChildren();
+  const all = [...new Set([STATUS.start].concat(Object.values(STATUS.next).flat()))];
+  all.forEach(name => {
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.textContent = name;
+    b.disabled = !(STATUS.next[status] || []).includes(name);
+    b.onclick = () => { status = name; renderStatus(); };
+    box.appendChild(b);
+  });
+  const reset = document.createElement('button');
+  reset.className = 'btn';
+  reset.textContent = '처음부터';
+  reset.onclick = () => { status = STATUS.start; renderStatus(); };
+  box.appendChild(reset);
+}
+renderStatus();
+
+// ===== 탭 3: 간이 계산기 =====
+function renderCalc() {
+  const out = CALC.map((c, i) => {
+    const v = +document.getElementById('calc-' + i).value;
+    document.getElementById('calc-val-' + i).textContent = v.toLocaleString();
+    const visits = v <= 0 ? 0 : Math.ceil(v / c.limit);
+    const cost = c.cost ? ` · 만드는 비용 약 ${(v * 1000 * c.cost / 1e8).toFixed(1)}억 원` : '';
+    return `${c.name}: 배가 ${visits}번 갑니다${cost}`;
+  });
+  document.getElementById('calc-result').innerHTML = out.join('<br>');
+}
+const calcBox = document.getElementById('calc');
+CALC.forEach((c, i) => {
+  const l = document.createElement('label');
+  l.className = 'slide';
+  l.innerHTML = `<span>${c.name}</span><input type="range" id="calc-${i}" min="0" max="${c.max}" step="${c.step}" value="0"><span id="calc-val-${i}">0</span>`;
+  l.querySelector('input').addEventListener('input', renderCalc);
+  calcBox.appendChild(l);
+});
+renderCalc();
+
+// ===== 탭 3: 퀴즈 =====
+const quizBox = document.getElementById('quiz');
+QUIZ.forEach(item => {
+  const wrap = document.createElement('div');
+  wrap.className = 'quiz';
+  wrap.innerHTML = `<p><strong>${item.q}</strong></p>`;
+  const why = document.createElement('p');
+  why.className = 'explain';
+  why.textContent = item.why;
+  item.options.forEach((o, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.textContent = o;
+    b.onclick = () => {
+      b.classList.add(i === item.answer ? 'right' : 'wrong');
+      why.classList.add('show');
+    };
+    wrap.appendChild(b);
+  });
+  wrap.appendChild(why);
+  quizBox.appendChild(wrap);
+});
+</script>
+</body>
+</html>
