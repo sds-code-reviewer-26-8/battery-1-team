@@ -52,6 +52,7 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+*.tsbuildinfo
 /package.json
 /package-lock.json
 /playwright.config.ts
