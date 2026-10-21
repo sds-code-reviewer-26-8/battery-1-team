@@ -38,3 +38,9 @@ out/
 
 ### H2 file database ###
 data/
+
+### Understand-Anything ###
+.ua/
+
+### Claude Code ###
+.claude/
