@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>배터리 주문 이해 문서</title>
+<style>
+:root {
+  --bg: #f7f8fa; --panel: #ffffff; --text: #1f2933; --muted: #64707d; --line: #dfe3e8;
+  --accent: #2563eb; --accent-soft: #e6eefc; --ok: #15803d; --warn: #b45309; --warn-soft: #fdf1e1;
+  --code: #eef1f5;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14181d; --panel: #1c2128; --text: #e6eaee; --muted: #95a1ad; --line: #2e3640;
+    --accent: #6ea0ff; --accent-soft: #1d2b45; --ok: #4ade80; --warn: #f0b35a; --warn-soft: #2d2415;
+    --code: #252c35;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14181d; --panel: #1c2128; --text: #e6eaee; --muted: #95a1ad; --line: #2e3640;
+  --accent: #6ea0ff; --accent-soft: #1d2b45; --ok: #4ade80; --warn: #f0b35a; --warn-soft: #2d2415;
+  --code: #252c35;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.7 -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+}
+.layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); max-width: 1060px; margin: 0 auto; gap: 32px; padding: 0 16px; }
+nav.toc { position: sticky; top: 0; align-self: start; padding: 28px 0; font-size: 14px; max-height: 100vh; overflow: auto; }
+nav.toc strong { display: block; margin-bottom: 8px; }
+nav.toc a { display: block; padding: 6px 10px; border-left: 3px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+main { padding: 28px 0 80px; min-width: 0; }
+h1 { font-size: 26px; margin: 0 0 4px; }
+h2 { font-size: 21px; margin: 0 0 12px; padding-top: 4px; }
+.sub { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 24px; margin-bottom: 20px; scroll-margin-top: 16px; }
+.lead li { margin: 6px 0; font-size: 17px; }
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 14px 0; }
+.flow .box { flex: 1 1 130px; background: var(--accent-soft); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.flow .box b { display: block; margin-bottom: 2px; }
+.flow .arrow { align-self: center; color: var(--muted); font-size: 20px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0; display: block; overflow-x: auto; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+code { background: var(--code); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+pre { background: var(--code); padding: 10px 14px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.55; margin: 8px 0; }
+pre code { padding: 0; background: none; }
+details { border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; margin: 10px 0; background: var(--bg); }
+summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+abbr { text-decoration: underline dotted var(--muted); cursor: help; }
+.cards { display: grid; gap: 12px; counter-reset: step; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px 12px 52px; position: relative; background: var(--bg); }
+.card::before {
+  counter-increment: step; content: counter(step); position: absolute; left: 14px; top: 12px;
+  width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff;
+  display: grid; place-items: center; font-weight: 700; font-size: 14px;
+}
+.card h3 { margin: 0 0 4px; font-size: 16px; }
+.card p { margin: 4px 0; font-size: 15px; }
+.tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); margin-right: 6px; }
+.tag.check { color: var(--warn); border-color: var(--warn); }
+.tag.good { color: var(--ok); border-color: var(--ok); }
+.review ul { list-style: none; padding: 0; margin: 0; }
+.review li { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 8px 0; background: var(--bg); }
+.review li.warn { background: var(--warn-soft); }
+.review li b { display: block; }
+.review li .ref { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.review li .how { display: block; font-size: 14px; margin-top: 4px; }
+.note { color: var(--muted); font-size: 14px; }
+@media (max-width: 760px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { position: static; max-height: none; padding: 16px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  nav.toc strong { width: 100%; }
+  nav.toc a { border: 1px solid var(--line); border-radius: 99px; padding: 4px 12px; }
+  section { padding: 18px 16px; }
+  .flow .arrow { transform: rotate(90deg); flex: 0 0 100%; text-align: center; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" id="toc">
+  <strong>목차</strong>
+  <a href="#s1">1. 3줄 요약</a>
+  <a href="#s2">2. 누가, 무엇을 하나</a>
+  <a href="#s3">3. 업무 규칙</a>
+  <a href="#s4">4. 지도</a>
+  <a href="#s5">5. 예시 따라가기</a>
+  <a href="#s6">6. 리뷰 포인트</a>
+</nav>
+<main>
+<h1>배터리 주문 프로그램 이해 문서</h1>
+<p class="sub">독자: 신입 개발자 · 리뷰 중점: 계산·업무 규칙 정확성 · 코드에서 직접 확인한 내용만 적었고, 확인하지 못한 것은 "확인 필요"로 표시했습니다. 개발 용어는 점선 밑줄에 마우스를 올리면 뜻이 보입니다.</p>
+
+<section id="s1">
+  <h2>1. 3줄 요약</h2>
+  <ol class="lead">
+    <li>외국 배터리 공장 4곳(중국, 일본, 베트남, 인도네시아)에 "얼마나 만들어 달라"고 주문하는 프로그램입니다.</li>
+    <li>만든 배터리를 배로 한국에 가져오는 길을 "가장 싼 길 / 가장 빠른 길 / 가까운 곳부터 가는 길" 세 가지로 계산해 줍니다.</li>
+    <li>마음에 드는 길을 고르면 주문이 확정되고, 그 뒤로 "진행 → 완료"로 상태를 관리합니다.</li>
+  </ol>
+</section>
+
+<section id="s2">
+  <h2>2. 누가, 무엇을 하나</h2>
+  <p>사용자는 로그인한 담당자 한 종류뿐입니다. 하는 일은 네 단계입니다.</p>
+  <div class="flow">
+    <div class="box"><b>① 수량 정하기</b>공장별로 몇 K(천 개)를 만들지 입력</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>② 시뮬레이션</b>세 가지 길과 일수·비용 확인</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>③ 주문 확정</b>하나를 골라 확정, 메모 남기기</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>④ 상태 관리</b>확정 → 진행 → 완료 (또는 취소)</div>
+  </div>
+  <p>별도 화면에서 <b>기준 값</b>(공장 생산 능력, 나라 사이 항해 일수, 배 척수, 배 하루 운항비)을 고칩니다. 계산은 이 기준 값을 입력으로 쓰므로, <b>이 문서의 "계산 정확성"은 기준 값이 올바르다는 전제</b> 위에 있습니다.</p>
+  <details>
+    <summary>화면과 요청 주소</summary>
+    <table>
+      <tr><th>화면</th><th>주소</th><th>하는 일</th></tr>
+      <tr><td>로그인</td><td><code>/login</code></td><td>admin / admin 고정 계정</td></tr>
+      <tr><td>주문 목록</td><td><code>/orders</code></td><td>상태별 필터</td></tr>
+      <tr><td>새 주문</td><td><code>/orders/new</code></td><td>수량 입력 → <code>POST /api/simulate</code> → <code>POST /api/orders</code>(확정)</td></tr>
+      <tr><td>주문 상세</td><td><code>/orders/{id}</code></td><td>상태 변경, 이력</td></tr>
+      <tr><td>기준 값</td><td><code>/master</code></td><td>공장·항로·배 설정 저장</td></tr>
+    </table>
+  </details>
+</section>
+
+<section id="s3">
+  <h2>3. 업무 규칙</h2>
+  <p class="note">규칙 대부분은 계산기 클래스의 설명 주석(<code>Planner.java:15-26</code>)에 적혀 있고, 아래는 그 규칙이 코드 어디에 구현됐는지를 함께 보여 줍니다.</p>
+  <ul>
+    <li><b>생산:</b> 주문 즉시(0일차) 모든 공장이 동시에 시작합니다. 하루 생산 = min(하루 최대, <abbr title="공장 창고가 쌓아 둘 수 있는 최대 수량">재고 상한</abbr> − 현재 재고, 남은 주문). <code>Planner.java:402</code></li>
+    <li><b>수거:</b> 배는 도착한 날 그 공장 재고를 전부 싣습니다. 수거량이 그날 재고와 다르면 예외를 던집니다. <code>Planner.java:393-397</code></li>
+    <li><b>방문 횟수:</b> 올림(주문 ÷ 재고 상한). 마지막 방문 전까지는 재고 상한만큼, 마지막은 나머지를 싣습니다. <code>Planner.java:39-47, 84-98</code></li>
+    <li><b>한 나라, 한 배:</b> 나라들을 "배 한 척이 맡을 묶음"으로 나누는 모든 방법을 만들어 시도하므로 자동으로 지켜집니다. <code>Planner.java:101-127</code></li>
+    <li><b>왕복:</b> 여러 번 수거하면 한국에 돌아와 내려놓고 다시 출항합니다. 한 왕복 안에서는 항해 일수가 가장 짧은 방문 순서를 씁니다. <code>Planner.java:213-224</code></li>
+    <li><b>늦게 출항:</b> 출항일 = max(배가 한국에 돌아온 날, 각 방문지의 "준비 완료일 − 거기까지 가는 일수"). 한국 대기는 무료입니다. <code>Planner.java:318-324</code></li>
+    <li><b>비용:</b> 생산비 = 수량(K) × 1,000 × 셀당 원가. 운항비 = 바다에서 보낸 날수 × 배 하루 운항비. <code>Planner.java:362, 341</code></li>
+    <li><b>세 가지 길:</b> 운항비 최소(비용이 같으면 더 빠른 쪽) / 가장 빠르게(일수가 같으면 더 싼 쪽) / 가까운 곳부터(한국에서 가까운 나라를 배에 돌려 배정). <code>Planner.java:56-78, 255-284</code></li>
+    <li><b>한도:</b> 총 주문 1K ~ 100,000K, 배 1~4척. <code>BatteryService.java:197-216, 36</code></li>
+  </ul>
+  <details>
+    <summary>처음 들어 있는 기준 값 (코드에 박혀 있는 초기 데이터)</summary>
+    <table>
+      <tr><th>공장</th><th class="num">하루 최대</th><th class="num">재고 상한</th><th class="num">셀당 원가</th><th class="num">한국까지</th></tr>
+      <tr><td>중국</td><td class="num">400K</td><td class="num">4,000K</td><td class="num">700원</td><td class="num">1일</td></tr>
+      <tr><td>일본</td><td class="num">800K</td><td class="num">2,000K</td><td class="num">900원</td><td class="num">2일</td></tr>
+      <tr><td>베트남</td><td class="num">200K</td><td class="num">10,000K</td><td class="num">550원</td><td class="num">5일</td></tr>
+      <tr><td>인도네시아</td><td class="num">300K</td><td class="num">7,000K</td><td class="num">450원</td><td class="num">7일</td></tr>
+    </table>
+    <p class="note">배 3척, 배 하루 운항비 1억 원. 공장 사이 항해 일수: 중국-일본 2, 중국-베트남 4, 중국-인도네시아 6, 일본-베트남 5, 일본-인도네시아 7, 베트남-인도네시아 2. <code>BatteryService.java:63-86</code></p>
+  </details>
+</section>
+
+<section id="s4">
+  <h2>4. 지도</h2>
+  <p>이 프로젝트는 <abbr title="자바 웹 애플리케이션을 빠르게 만드는 프레임워크">Spring Boot</abbr> 기반이고, 요청이 아래 순서로 한 방향으로 흐릅니다.</p>
+  <div class="flow">
+    <div class="box"><b>화면</b>HTML 템플릿(<abbr title="서버에서 HTML을 만들어 주는 템플릿 엔진">Thymeleaf</abbr>)과 자바스크립트</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>컨트롤러</b>요청을 받아 서비스에 전달</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>서비스</b>검증, 확정, 상태 변경</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>Planner</b>세 가지 길 계산 (DB를 모르는 순수 계산)</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>리포지토리</b>DB 읽기·쓰기 (<abbr title="자바 객체와 DB 표를 연결하는 기술">JPA</abbr> + <abbr title="파일로 저장되는 가벼운 DB">H2</abbr>)</div>
+  </div>
+  <table>
+    <tr><th>역할</th><th>하는 일</th><th>파일</th></tr>
+    <tr><td>계산기</td><td>세 가지 길, 일별 생산·재고 계산. 입력과 출력이 모두 값 객체라 단독 테스트가 쉬움</td><td><code>simulation/Planner.java</code>, <code>Plan.java</code>, <code>Master.java</code></td></tr>
+    <tr><td>서비스</td><td>입력 검증, 주문 확정, 상태 변경, 기준 값 수정</td><td><code>service/BatteryService.java</code></td></tr>
+    <tr><td>컨트롤러</td><td>화면 주소와 JSON API 연결, 로그인</td><td><code>controller/AppController.java</code></td></tr>
+    <tr><td>문지기</td><td>로그인 안 하면 로그인 화면만 허용</td><td><code>config/LoginInterceptor.java</code>, <code>WebConfig.java</code></td></tr>
+    <tr><td>엔티티</td><td>DB 표 정의: 공장, 항로, 설정, 주문, 상태 이력</td><td><code>entity/*</code></td></tr>
+    <tr><td>화면</td><td>목록·상세·새 주문·기준 값, 배 이동 애니메이션</td><td><code>templates/*</code>, <code>static/js/*</code></td></tr>
+    <tr><td>테스트</td><td>계산 규칙, 주문 흐름</td><td><code>src/test/*</code></td></tr>
+  </table>
+  <details>
+    <summary>알아 두면 좋은 사실</summary>
+    <ul>
+      <li>확정할 때 <b>서버가 같은 입력으로 다시 계산</b>하고, 화면이 보낸 결과는 믿지 않습니다. <code>BatteryService.java:227</code></li>
+      <li>확정된 주문에는 당시 기준 값과 계산 결과 전체가 JSON으로 함께 저장됩니다. 나중에 기준 값을 바꿔도 옛 주문은 그대로입니다. <code>BatteryService.java:241-245</code></li>
+      <li>"K"는 1,000개(셀) 단위입니다. 비용 계산에서 1,000을 곱하는 이유입니다.</li>
+    </ul>
+  </details>
+</section>
+
+<section id="s5">
+  <h2>5. 예시 따라가기</h2>
+  <p>처음 값 그대로 <b>네 공장에 3,000K씩(총 12,000K)</b> 주문하고 <b>"운항비 최소"</b> 길을 고른 경우입니다. 숫자는 <code>PlannerTest.defaultOrderSummary</code>를 실제로 돌려 얻은 값입니다.</p>
+  <div class="cards">
+    <div class="card"><h3>요청이 들어온다</h3>
+      <p>"시뮬레이션" 버튼 → <code>POST /api/simulate</code> → <code>AppController.simulate</code>(172) → <code>BatteryService.simulate</code>(190). 수량이 음수이거나 합계가 0 이하·100,000 초과면 여기서 거절합니다(197-216).</p></div>
+    <div class="card"><h3>방문 횟수 계산 · <code>Planner.visits</code></h3>
+      <p>중국 3,000 ÷ 4,000 → 1번 · 일본 3,000 ÷ 2,000 → <b>2번(2,000K + 1,000K)</b> · 베트남 1번 · 인도네시아 1번.</p>
+      <details><summary>코드 보기</summary><pre><code>result.put(c, q &lt;= 0 ? 0 : (q + limit - 1) / limit);   // Planner.java:44 올림 나눗셈</code></pre></details></div>
+    <div class="card"><h3>후보를 모두 만든다 · <code>Planner.plan</code></h3>
+      <p>나라 4개를 배 한 척이 맡을 묶음으로 나누는 모든 방법(최대 15가지)을 만들고, 각 묶음의 왕복 구성과 방문 순서를 정해 <code>schedule</code>로 일정을 계산합니다. 그중 운항비가 가장 낮은 것이 "운항비 최소", 일수가 가장 짧은 것이 "가장 빠르게"입니다(56-72).</p></div>
+    <div class="card"><h3>출항일 계산 · <code>Planner.schedule</code></h3>
+      <p>공장 준비 기간: 일본 2,000K ÷ 800 → 3일, 중국 3,000K ÷ 400 → 8일, 인도네시아 3,000K ÷ 300 → 10일, <b>베트남 3,000K ÷ 200 → 15일(병목)</b>.</p>
+      <details><summary>코드 보기</summary><pre><code>int ready = lastPickup.getOrDefault(c, 0) + ceilDiv(amount, master.factory(c).maxDaily());
+depart = Math.max(depart, ready - offset[i]);   // Planner.java:322-323</code></pre></details></div>
+    <div class="card"><h3>선택된 안: 배 1척이 두 번 왕복</h3>
+      <p><b>첫 왕복</b>: 일본이 3일이면 준비되고 한국에서 2일 거리 → 1일차 출항, 3일차 도착(2,000K 적재), 5일차 귀환. 바다 4일.<br>
+      <b>두 번째 왕복</b>: 베트남(15일)에 맞춰 10일차 출항 → 중국 11일 → 베트남 15일 → 인도네시아 17일 → 일본 24일(남은 1,000K) → 26일차 귀환. 바다 16일.</p></div>
+    <div class="card"><h3>비용과 검산 · <code>toPlan</code> / <code>simulateFactory</code></h3>
+      <p>생산비 = 중국 21억 + 일본 27억 + 베트남 16.5억 + 인도네시아 13.5억 = <b>78억</b>. 운항비 = (4 + 16)일 × 1억 = <b>20억</b>. 합계 <b>98억 원, 26일</b>.</p>
+      <p>마지막으로 하루씩 시뮬레이션하며 "수거량 = 그날 재고", "주문을 전부 수거했는가"를 검산하고, 어긋나면 예외를 던집니다(386-411).</p></div>
+    <div class="card"><h3>다른 두 길과 비교</h3>
+      <table>
+        <tr><th>길</th><th class="num">소요</th><th class="num">운항비</th><th class="num">합계</th><th class="num">배</th></tr>
+        <tr><td>운항비 최소</td><td class="num">26일</td><td class="num">20억</td><td class="num">98억</td><td class="num">1척</td></tr>
+        <tr><td>가장 빠르게</td><td class="num">20일</td><td class="num">32억</td><td class="num">110억</td><td class="num">3척</td></tr>
+        <tr><td>가까운 곳부터</td><td class="num">21일</td><td class="num">32억</td><td class="num">110억</td><td class="num">3척</td></tr>
+      </table>
+      <p class="note">배 3척이면 6일 빨라지는 대신 12억이 더 듭니다. 생산비(78억)는 어느 길이든 같습니다.</p></div>
+    <div class="card"><h3>확정 · <code>BatteryService.confirm</code></h3>
+      <p>같은 입력으로 다시 계산 → 기준 값 번호 비교 → 고른 길 선택 → 주문과 상태 이력(확정) 저장(225-248).</p></div>
+  </div>
+</section>
+
+<section id="s6" class="review">
+  <h2>6. 리뷰 포인트 — 계산·업무 규칙 정확성</h2>
+  <p class="note">"의심해 볼 만한 곳"이지 "틀렸다"는 뜻이 아닙니다. <span class="tag check">확인 필요</span>는 의도인지 실수인지 요구사항 담당자에게 물어야 하는 항목입니다. 각 항목 아래 "확인 방법"은 리뷰하면서 해 볼 수 있는 일입니다.</p>
+  <ul>
+    <li class="warn"><b><span class="tag check">확인 필요</span>"운항비 최소"는 전체 중 최소인가, 시도한 안 중 최소인가</b>
+      같은 나라를 여러 왕복에 나눠 들를 때 "앞쪽 / 뒤쪽 / 고르게" 세 가지 배치만 만듭니다. 예를 들어 방문 횟수가 왕복 수보다 적은 나라가 어느 왕복에 들를지, 세 가지 패턴 밖의 조합은 시도하지 않습니다. 그래서 이름이 약속하는 "최소"가 "시도한 안 중 최소"일 수 있습니다.
+      <span class="ref">Planner.java:139-210</span>
+      <span class="how">확인 방법: 방문 횟수가 서로 다른 입력(예: 중국 4,001 / 일본 9,000)으로 배치를 직접 전부 만들어 비교하는 테스트를 작성해 본다.</span></li>
+    <li class="warn"><b><span class="tag check">확인 필요</span>항구 대기·짐 싣는 시간 0일</b>
+      도착일과 출발일이 같게 만들어집니다(<code>new Stop(c, arrive, arrive, …)</code>). 하역 시간을 무시하는 것이 요구사항인지 확인이 필요합니다.
+      <span class="ref">Planner.java:330</span></li>
+    <li class="warn"><b>극단 입력에서 계산량이 폭발하지 않는가</b>
+      재고 상한은 1까지, 총 주문은 100,000K까지 허용합니다. 이 경우 방문 횟수가 수만 번이 되어 왕복 목록과 일별 배열이 매우 커지고, 후보마다 반복됩니다. 실제 소요 시간은 측정하지 못했습니다.
+      <span class="ref">BatteryService.java:138 · Planner.java:33, 84-98, 173-197</span>
+      <span class="how">확인 방법: 재고 상한 1, 총 100,000K로 <code>Planner.plan</code> 시간을 재 본다.</span></li>
+    <li class="warn"><b>자체 검산 실패가 사용자에게 어떻게 보이는가</b>
+      어긋나면 <code>IllegalStateException</code>을 던지는데, 컨트롤러는 <code>BusinessException</code>만 잡습니다. 그래서 사용자에게는 안내 문구 대신 일반 서버 오류가 나갈 수 있습니다. 실제 화면은 확인하지 못했습니다.
+      <span class="ref">Planner.java:395, 409 · AppController.java:174-179</span></li>
+    <li class="warn"><b>항로가 "직접 이동"만 고려됨</b>
+      방문 순서는 두 나라 사이 직접 항해 일수만 씁니다. 기준 값 화면에는 "직접 가는 것이 한국을 거치는 것보다 빠르다"는 검사가 없어, 값을 이상하게 넣으면 직접 항로가 더 느린데도 그 길을 쓸 수 있습니다.
+      <span class="ref">Planner.java:226-234 · BatteryService.java:144-152</span></li>
+    <li><b>"가까운 곳부터"는 의도적으로 단순한 규칙</b>
+      가까운 나라부터 배에 돌아가며 배정하고, 각 왕복에서도 가까운 나라 순서로 들릅니다. 최적화를 하지 않으므로 보통 "운항비 최소"보다 비싸지만, 이를 확인하는 테스트는 기본 주문 한 가지뿐입니다.
+      <span class="ref">Planner.java:255-284 · PlannerTest.java: costOptionIsNotMoreExpensive…</span></li>
+    <li class="warn"><b>기대값을 고정한 테스트가 부족하다</b>
+      기본 주문(3,000K × 4)의 결과를 출력만 하는 테스트(<code>defaultOrderSummary</code>)는 있지만 "26일, 98억" 같은 값을 단언하지는 않습니다. 계산 규칙이 바뀌어도 이 값이 조용히 달라질 수 있습니다. 반면 "수거량 = 주문량", "한 나라 한 배", "생산비 = 수량 × 원가" 같은 성질은 테스트로 보호됩니다.
+      <span class="ref">PlannerTest.java: defaultOrderSummary</span>
+      <span class="how">확인 방법: 위 3가지 길의 일수·비용을 그대로 단언하는 테스트를 추가해 본다.</span></li>
+    <li><span class="tag good">좋음</span><b>비용 계산 단위가 안전하다</b>
+      금액은 모두 <code>long</code>으로 계산합니다. 총 주문 한도(100,000K) × 1,000 × 셀당 원가 상한(1억)도 long 범위 안입니다.
+      <span class="ref">Planner.java:362 · BatteryService.java:139</span></li>
+    <li><span class="tag good">좋음</span><b>계산기가 스스로 검산한다</b>
+      일정을 만든 뒤 하루씩 생산·재고를 다시 시뮬레이션해서 수거량과 주문 완료 여부를 확인합니다. 일정 계산 오류를 조기에 드러내는 장치입니다.
+      <span class="ref">Planner.java:386-411</span></li>
+  </ul>
+</section>
+</main>
+</div>
+<script>
+(function () {
+  try {
+    var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          links.forEach(function (a) { a.classList.remove('on'); });
+          if (map[e.target.id]) map[e.target.id].classList.add('on');
+        }
+      });
+    }, { rootMargin: '-10% 0px -70% 0px' });
+    document.querySelectorAll('section[id]').forEach(function (s) { io.observe(s); });
+  } catch (e) { /* 목차 강조만 빠진다 */ }
+})();
+</script>
+</body>
+</html>
