@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>배터리 운송 계획 기본 가이드</title>
+<style>
+:root{
+  --bg:#f6f7fb; --card:#fff; --ink:#1d2433; --sub:#5b6478; --line:#e1e5ee;
+  --accent:#2f6fed; --accent-soft:#e6eefe; --ok:#1a8f5a; --ok-soft:#e1f5ec;
+  --warn:#c2570c; --warn-soft:#fdeede; --bad:#c62f3b; --bad-soft:#fbe5e7;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#10131a; --card:#1a1f2b; --ink:#e8ecf4; --sub:#9aa5ba; --line:#2c3445;
+    --accent:#6c9bff; --accent-soft:#1f2c4a; --ok:#4fd195; --ok-soft:#173226;
+    --warn:#f0a063; --warn-soft:#3a2819; --bad:#ff7a85; --bad-soft:#3b1d22;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;line-height:1.6}
+header{padding:28px 16px 8px;max-width:920px;margin:0 auto}
+header h1{margin:0 0 4px;font-size:1.5rem}
+header p{margin:0;color:var(--sub)}
+main{max-width:920px;margin:0 auto;padding:0 16px 48px}
+.tabs{display:flex;gap:6px;margin:18px 0 16px;border-bottom:2px solid var(--line);overflow-x:auto}
+.tab{appearance:none;border:0;background:none;color:var(--sub);font:inherit;font-weight:700;
+  padding:12px 16px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel[hidden]{display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+.card h2{margin:0 0 8px;font-size:1.15rem}
+.card h3{margin:16px 0 6px;font-size:1rem}
+.lead{font-size:1.05rem}
+.muted{color:var(--sub);font-size:.92rem}
+.hint{background:var(--accent-soft);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:.95rem}
+.hint.warn{background:var(--warn-soft)}
+.hint.bad{background:var(--bad-soft)}
+.hint.ok{background:var(--ok-soft)}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.step{text-align:left;background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:12px;
+  cursor:pointer;font:inherit;color:inherit}
+.step b{display:block;color:var(--accent);font-size:.85rem}
+.step[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.detail{margin-top:12px;min-height:3.2em}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.chip{border:2px solid var(--line);background:var(--bg);color:inherit;border-radius:999px;
+  padding:6px 14px;font:inherit;cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:.93rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--sub);font-weight:600}
+.scroll{overflow-x:auto}
+details{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:8px 0;background:var(--bg)}
+summary{cursor:pointer;font-weight:700}
+details p{margin:8px 0 0}
+.calc{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+label{display:block;font-size:.9rem;color:var(--sub);margin-bottom:4px}
+select,input[type=number]{width:100%;padding:9px;font:inherit;color:inherit;background:var(--bg);
+  border:1px solid var(--line);border-radius:8px}
+input[type=range]{width:100%}
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}
+.metric{background:var(--bg);border-radius:12px;padding:12px;border:1px solid var(--line)}
+.metric small{color:var(--sub);display:block}
+.metric strong{font-size:1.3rem}
+.btn{appearance:none;border:0;background:var(--accent);color:#fff;font:inherit;font-weight:700;
+  padding:10px 18px;border-radius:10px;cursor:pointer}
+.btn.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.progress{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0 14px}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .25s}
+.badge{display:inline-block;padding:3px 12px;border-radius:99px;font-weight:700;font-size:.9rem;
+  background:var(--accent-soft);color:var(--accent)}
+.badge.done{background:var(--ok-soft);color:var(--ok)}
+.badge.cancel{background:var(--bad-soft);color:var(--bad)}
+.log{list-style:none;padding:0;margin:10px 0 0;font-size:.92rem}
+.log li{padding:5px 0;border-bottom:1px dashed var(--line)}
+.opt{display:block;width:100%;text-align:left;margin:6px 0;background:var(--bg);color:inherit;
+  border:2px solid var(--line);border-radius:10px;padding:10px 14px;font:inherit;cursor:pointer}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.sr{position:absolute;left:-9999px}
+@media (max-width:520px){header h1{font-size:1.25rem}.tab{padding:10px 12px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>배터리 운송 계획 기본 가이드</h1>
+  <p>개발 지식 없이, 세 단계로 이 시스템이 무엇을 하는지 이해해 봅니다.</p>
+</header>
+
+<main>
+  <div class="tabs" role="tablist" aria-label="이해 단계">
+    <button class="tab" role="tab" id="t1" aria-controls="p1" aria-selected="true">① 한눈에 보기</button>
+    <button class="tab" role="tab" id="t2" aria-controls="p2" aria-selected="false" tabindex="-1">② 핵심 규칙</button>
+    <button class="tab" role="tab" id="t3" aria-controls="p3" aria-selected="false" tabindex="-1">③ 직접 따라가기</button>
+  </div>
+
+  <!-- ===================== 탭 1 ===================== -->
+  <section class="panel" id="p1" role="tabpanel" aria-labelledby="t1">
+    <div class="card">
+      <h2>이 시스템은 무엇인가요?</h2>
+      <p class="lead">해외 공장 4곳에서 만든 배터리 셀을 <b>배로 한국까지 실어 오는 계획</b>을 세워 주는 업무 도구입니다.</p>
+      <p>담당자가 "나라별로 몇 개가 필요한지"만 입력하면, 시스템이 <b>가장 싼 길 / 가장 빠른 길 / 가까운 곳부터 도는 길</b> 세 가지를 비교해 보여 주고, 마음에 드는 하나를 골라 <b>주문으로 확정</b>할 수 있습니다.</p>
+      <div class="hint">용어 하나만 기억하세요. <b>1K = 배터리 셀 1,000개</b>입니다. 화면의 수량은 모두 K 단위입니다.</div>
+    </div>
+
+    <div class="card">
+      <h2>담당자가 하는 일 (카드를 눌러 보세요)</h2>
+      <div class="flow" id="flow"></div>
+      <div class="detail hint" id="flowDetail" aria-live="polite">위 카드 중 하나를 눌러 보세요.</div>
+    </div>
+
+    <div class="card">
+      <h2>등장하는 나라 (눌러 보세요)</h2>
+      <p class="muted">한국이 받는 쪽이고, 나머지 네 나라가 공장입니다.</p>
+      <div class="chips" id="countryChips"></div>
+      <div class="detail hint" id="countryDetail" aria-live="polite">나라를 선택하면 기본 설정값을 볼 수 있습니다.</div>
+    </div>
+  </section>
+
+  <!-- ===================== 탭 2 ===================== -->
+  <section class="panel" id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+    <div class="card">
+      <h2>시스템이 따르는 기본 규칙</h2>
+      <p class="muted">각 규칙을 눌러 풀어서 읽어 보세요.</p>
+      <details><summary>1. 공장은 동시에 생산을 시작한다</summary>
+        <p>주문한 날(0일차)에 모든 공장이 한꺼번에 만들기 시작합니다. 하루에 만드는 양은 공장마다 정해져 있습니다.</p></details>
+      <details><summary>2. 창고(재고)에는 한도가 있다</summary>
+        <p>공장 창고에 쌓아 둘 수 있는 양에는 상한이 있습니다. 창고가 가득 차면 배가 가져가기 전까지 더 만들지 않습니다.</p></details>
+      <details><summary>3. 배는 도착한 순간 쌓인 재고를 전부 싣는다</summary>
+        <p>일부만 싣거나 기다렸다 싣는 일은 없습니다. 한 나라는 한 척의 배만 방문합니다.</p></details>
+      <details><summary>4. 주문이 창고 한도보다 많으면 여러 번 방문한다</summary>
+        <p>방문 횟수 = 주문량 ÷ 창고 한도를 올림한 값입니다. 여러 번 가야 하면 한국에 들러 짐을 내리고 다시 출항합니다.</p></details>
+      <details><summary>5. 배는 "딱 맞게" 늦게 출항한다</summary>
+        <p>재고가 채워지는 날에 맞춰 도착하도록 출항을 늦춥니다. 한국 항구에서 기다리는 동안은 비용이 들지 않습니다.</p></details>
+      <details><summary>6. 비용은 두 가지를 더한다</summary>
+        <p><b>생산비</b> = 주문 수량 × 셀당 원가, <b>운항비</b> = 배가 바다를 다닌 날 수 × 하루 운항비. 항구에서 대기한 날은 포함되지 않습니다.</p></details>
+      <details><summary>7. 세 가지 경로를 비교해 준다</summary>
+        <p><b>운항비 최소</b>: 가장 싼 방법 / <b>가장 빠르게</b>: 전체 기간이 가장 짧은 방법 / <b>가까운 곳부터</b>: 한국에서 가까운 나라부터 차례로 배를 나눠 배정하는 단순한 방법.</p></details>
+      <details><summary>8. 입력할 수 있는 범위</summary>
+        <p>총 필요 수량은 1K 이상 100,000K 이하입니다. 배는 1~4척, 항해 일수는 1~365일까지 설정할 수 있습니다.</p></details>
+    </div>
+
+    <div class="card">
+      <h2>기준 정보 (처음 설정된 값)</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>공장</th><th>하루 최대 생산(K)</th><th>창고 한도(K)</th><th>셀당 원가(원)</th></tr></thead>
+        <tbody id="masterTable"></tbody>
+      </table></div>
+      <p class="muted">배는 기본 3척, 한 척당 하루 운항비는 1억 원입니다. 이 값들은 "기준 정보" 화면에서 바꿀 수 있습니다.</p>
+    </div>
+
+    <div class="card">
+      <h2>직접 계산해 보기</h2>
+      <p class="muted">한 나라만 주문하고 배 한 척이 다녀오는 가장 단순한 경우를 계산합니다. 값을 바꾸면 바로 결과가 바뀝니다.</p>
+      <div class="calc">
+        <div><label for="cCountry">공장 나라</label><select id="cCountry"></select></div>
+        <div><label for="cQty">주문 수량 (K): <b id="cQtyV"></b></label>
+          <input type="range" id="cQty" min="100" max="20000" step="100" value="5000"></div>
+        <div><label for="cShip">하루 운항비 (억 원)</label>
+          <input type="number" id="cShip" min="0.1" step="0.1" value="1"></div>
+      </div>
+      <div class="out">
+        <div class="metric"><small>방문 횟수</small><strong id="oVisit"></strong></div>
+        <div class="metric"><small>전체 걸리는 날</small><strong id="oDays"></strong></div>
+        <div class="metric"><small>생산비</small><strong id="oProd"></strong></div>
+        <div class="metric"><small>운항비</small><strong id="oShip"></strong></div>
+        <div class="metric"><small>총 비용</small><strong id="oTotal"></strong></div>
+      </div>
+      <div class="hint" id="oNote"></div>
+    </div>
+  </section>
+
+  <!-- ===================== 탭 3 ===================== -->
+  <section class="panel" id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+    <div class="card">
+      <h2>주문 한 건의 여정</h2>
+      <p class="muted">"다음"을 눌러 처음부터 끝까지 따라가 보세요.</p>
+      <div class="progress"><i id="stBar"></i></div>
+      <div class="hint" id="stText" aria-live="polite"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn ghost" id="stPrev">이전</button>
+        <button class="btn" id="stNext">다음</button>
+        <span class="muted" id="stCount"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>주문 상태 바꿔 보기</h2>
+      <p class="muted">확정된 주문의 상태는 정해진 순서로만 바뀝니다. 가능한 버튼만 눌러집니다.</p>
+      <p>현재 상태: <span class="badge" id="sBadge">확정</span></p>
+      <div class="row">
+        <button class="btn" data-to="IN_PROGRESS">진행으로</button>
+        <button class="btn" data-to="COMPLETED">완료로</button>
+        <button class="btn ghost" data-to="CANCELED">취소</button>
+        <button class="btn ghost" id="sReset">처음부터</button>
+      </div>
+      <div class="hint" id="sMsg" aria-live="polite">확정 상태에서는 "진행" 또는 "취소"만 가능합니다.</div>
+      <ul class="log" id="sLog"></ul>
+    </div>
+
+    <div class="card">
+      <h2>이런 상황에서는 이렇게 됩니다</h2>
+      <div class="hint warn"><b>기준 정보가 바뀐 경우</b><br>시뮬레이션을 해 놓고 확정하기 전에 누군가 기준 정보(원가, 항해 일수 등)를 바꾸면, 확정은 거부되고 "다시 시뮬레이션해 주세요"라고 안내합니다.</div>
+      <div class="hint warn"><b>두 사람이 같은 주문을 동시에 바꾼 경우</b><br>먼저 바꾼 사람의 변경만 반영됩니다. 늦은 사람은 "다른 사용자가 먼저 변경했습니다. 화면을 새로 고쳐 확인하세요"라는 안내를 받습니다.</div>
+      <div class="hint bad"><b>주문을 취소한 경우</b><br>주문 목록에서 사라집니다. 되돌릴 수 없으니 취소 전에 한 번 더 확인하세요.</div>
+      <div class="hint"><b>확정할 때 계산을 다시 한다</b><br>화면에 보이던 값을 그대로 믿지 않고, 확정 순간에 같은 수량으로 다시 계산해 저장합니다. 그래서 화면 조작으로 결과를 조작할 수 없습니다.</div>
+    </div>
+
+    <div class="card">
+      <h2>이해 확인 퀴즈</h2>
+      <div id="quiz"></div>
+      <p class="muted" id="quizScore"></p>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){return document.getElementById(id);};
+  var fmtWon = function(w){return (w/1e8).toFixed(2).replace(/\.00$/,"")+"억 원";};
+
+  /* ---------- 기준 정보 (처음 설정된 값) ---------- */
+  var FACT = {
+    "중국":{maxDaily:400,limit:4000,cost:700,days:1},
+    "일본":{maxDaily:800,limit:2000,cost:900,days:2},
+    "베트남":{maxDaily:200,limit:10000,cost:550,days:5},
+    "인도네시아":{maxDaily:300,limit:7000,cost:450,days:7}
+  };
+  var NAMES = Object.keys(FACT);
+
+  /* ---------- 탭 ---------- */
+  var tabs = [$("t1"),$("t2"),$("t3")], panels = [$("p1"),$("p2"),$("p3")];
+  function selectTab(i, focus){
+    tabs.forEach(function(t,k){
+      t.setAttribute("aria-selected", k===i ? "true":"false");
+      t.tabIndex = k===i ? 0 : -1;
+      panels[k].hidden = k!==i;
+    });
+    if(focus) tabs[i].focus();
+    window.scrollTo(0,0);
+  }
+  tabs.forEach(function(t,i){
+    t.addEventListener("click",function(){selectTab(i,false);});
+    t.addEventListener("keydown",function(e){
+      if(e.key==="ArrowRight"){e.preventDefault();selectTab((i+1)%3,true);}
+      if(e.key==="ArrowLeft"){e.preventDefault();selectTab((i+2)%3,true);}
+    });
+  });
+
+  /* ---------- 탭 1: 업무 흐름 ---------- */
+  var FLOW = [
+    ["로그인","관리자 계정으로 로그인합니다. 로그인하지 않으면 다른 화면을 볼 수 없습니다."],
+    ["수량 입력","중국·일본·베트남·인도네시아에서 각각 몇 K가 필요한지 입력합니다. 0이어도 되지만 전체 합은 1K 이상이어야 합니다."],
+    ["경로 비교","시스템이 '운항비 최소 / 가장 빠르게 / 가까운 곳부터' 세 가지를 계산해 걸리는 날, 생산비, 운항비, 총 비용을 나란히 보여 줍니다."],
+    ["주문 확정","마음에 드는 경로를 고르고 메모를 남겨 확정합니다. 확정하면 그 시점의 계획과 기준 정보가 그대로 보관됩니다."],
+    ["상태 관리","확정된 주문은 '진행 → 완료'로 넘기거나 '취소'할 수 있습니다. 변경할 때마다 누가 언제 바꿨는지 기록이 남습니다."],
+    ["기준 정보 수정","공장 생산 능력, 창고 한도, 셀당 원가, 나라 간 항해 일수, 배 척수, 하루 운항비를 고칠 수 있습니다. 잘못된 값이 하나라도 있으면 아무것도 저장하지 않고 이유를 모아 알려 줍니다."]
+  ];
+  var flow = $("flow");
+  FLOW.forEach(function(f,i){
+    var b = document.createElement("button");
+    b.className="step"; b.setAttribute("aria-pressed","false");
+    b.innerHTML="<b>"+(i+1)+"단계</b>"+f[0];
+    b.addEventListener("click",function(){
+      [].forEach.call(flow.children,function(c){c.setAttribute("aria-pressed","false");});
+      b.setAttribute("aria-pressed","true");
+      $("flowDetail").textContent=f[1];
+    });
+    flow.appendChild(b);
+  });
+
+  var cc = $("countryChips");
+  var all = [["한국",null]].concat(NAMES.map(function(n){return [n,FACT[n]];}));
+  all.forEach(function(p){
+    var b=document.createElement("button");
+    b.className="chip"; b.setAttribute("aria-pressed","false"); b.textContent=p[0];
+    b.addEventListener("click",function(){
+      [].forEach.call(cc.children,function(c){c.setAttribute("aria-pressed","false");});
+      b.setAttribute("aria-pressed","true");
+      var d=$("countryDetail");
+      if(!p[1]){d.textContent="한국: 공장이 아니라 배터리를 받는 곳입니다. 모든 배는 한국에서 출발하고 한국으로 돌아옵니다.";}
+      else{d.textContent=p[0]+": 하루 최대 "+p[1].maxDaily+"K 생산, 창고 한도 "+p[1].limit+"K, 셀당 원가 "+p[1].cost+"원, 한국에서 배로 "+p[1].days+"일.";}
+    });
+    cc.appendChild(b);
+  });
+
+  /* ---------- 탭 2: 기준표와 계산기 ---------- */
+  NAMES.forEach(function(n){
+    var f=FACT[n], tr=document.createElement("tr");
+    tr.innerHTML="<td>"+n+"</td><td>"+f.maxDaily+"</td><td>"+f.limit.toLocaleString()+"</td><td>"+f.cost+"</td>";
+    $("masterTable").appendChild(tr);
+    var o=document.createElement("option"); o.value=n; o.textContent=n; $("cCountry").appendChild(o);
+  });
+
+  function calc(){
+    var f=FACT[$("cCountry").value];
+    var q=parseInt($("cQty").value,10);
+    var shipEok=parseFloat($("cShip").value); if(!(shipEok>0)) shipEok=0;
+    $("cQtyV").textContent=q.toLocaleString()+"K";
+    var v=Math.ceil(q/f.limit), d=f.days;
+    var lastPick=0, free=0;
+    for(var i=0;i<v;i++){
+      var amt = i<v-1 ? f.limit : q-(v-1)*f.limit;
+      var ready=lastPick+Math.ceil(amt/f.maxDaily);
+      var depart=Math.max(free,ready-d);
+      lastPick=depart+d;
+      free=depart+2*d;
+    }
+    var sail=2*d*v;
+    var prod=q*1000*f.cost, ship=sail*shipEok*1e8;
+    $("oVisit").textContent=v+"번";
+    $("oDays").textContent=free+"일";
+    $("oProd").textContent=fmtWon(prod);
+    $("oShip").textContent=fmtWon(ship);
+    $("oTotal").textContent=fmtWon(prod+ship);
+    $("oNote").textContent = v===1
+      ? "주문이 창고 한도("+f.limit.toLocaleString()+"K) 이하라서 한 번에 다 싣고 옵니다. 바다를 다닌 날은 왕복 "+sail+"일입니다."
+      : "주문이 창고 한도("+f.limit.toLocaleString()+"K)보다 많아 "+v+"번에 나눠 싣습니다. 그만큼 왕복이 늘어 바다를 다닌 날이 "+sail+"일이 됩니다.";
+  }
+  ["cCountry","cQty","cShip"].forEach(function(id){
+    $(id).addEventListener("input",calc); $(id).addEventListener("change",calc);
+  });
+  calc();
+
+  /* ---------- 탭 3: 여정 ---------- */
+  var STEPS = [
+    "1) 담당자가 로그인합니다. 주문 목록 화면이 열립니다.",
+    "2) '새 주문'에서 수량을 입력합니다. 예: 중국 3,000K · 일본 1,000K · 베트남 0 · 인도네시아 0.",
+    "3) 시뮬레이션을 누르면 세 가지 경로가 나타납니다. 걸리는 날과 비용을 비교합니다.",
+    "4) 가장 마음에 드는 경로를 고르고 메모를 적은 뒤 '확정'합니다. 이때 시스템은 같은 수량으로 한 번 더 계산하고, 기준 정보가 그대로인지 확인합니다.",
+    "5) 주문이 '확정' 상태로 목록에 올라옵니다. 상세 화면에서 경로와 비용, 변경 기록을 볼 수 있습니다.",
+    "6) 실제 운송이 시작되면 '진행', 끝나면 '완료'로 바꿉니다. 중간에 그만두면 '취소'합니다."
+  ];
+  var si=0;
+  function renderStep(){
+    $("stText").textContent=STEPS[si];
+    $("stBar").style.width=((si+1)/STEPS.length*100)+"%";
+    $("stCount").textContent=(si+1)+" / "+STEPS.length;
+    $("stPrev").disabled=si===0;
+    $("stNext").disabled=si===STEPS.length-1;
+  }
+  $("stPrev").addEventListener("click",function(){if(si>0){si--;renderStep();}});
+  $("stNext").addEventListener("click",function(){if(si<STEPS.length-1){si++;renderStep();}});
+  renderStep();
+
+  /* 상태 바꾸기 */
+  var LABEL={CONFIRMED:"확정",IN_PROGRESS:"진행",COMPLETED:"완료",CANCELED:"취소"};
+  var NEXT={CONFIRMED:["IN_PROGRESS","CANCELED"],IN_PROGRESS:["COMPLETED","CANCELED"],COMPLETED:[],CANCELED:[]};
+  var cur="CONFIRMED", step=0;
+  var sBtns=[].slice.call(document.querySelectorAll("[data-to]"));
+  function renderState(){
+    var b=$("sBadge");
+    b.textContent=LABEL[cur];
+    b.className="badge"+(cur==="COMPLETED"?" done":"")+(cur==="CANCELED"?" cancel":"");
+    sBtns.forEach(function(x){x.disabled=NEXT[cur].indexOf(x.dataset.to)<0;});
+  }
+  sBtns.forEach(function(x){
+    x.addEventListener("click",function(){
+      var to=x.dataset.to; if(NEXT[cur].indexOf(to)<0) return;
+      var li=document.createElement("li");
+      step++;
+      li.textContent=step+". "+LABEL[cur]+" → "+LABEL[to]+" (담당자·시각이 기록됩니다)";
+      $("sLog").appendChild(li);
+      cur=to; renderState();
+      $("sMsg").textContent = to==="CANCELED"
+        ? "취소되어 주문 목록에서 사라집니다. 더 이상 바꿀 수 없습니다."
+        : to==="COMPLETED" ? "완료되었습니다. 이후에는 상태를 바꿀 수 없습니다."
+        : "진행 상태에서는 '완료' 또는 '취소'만 가능합니다.";
+    });
+  });
+  $("sReset").addEventListener("click",function(){
+    cur="CONFIRMED"; step=0; $("sLog").innerHTML="";
+    $("sMsg").textContent="확정 상태에서는 '진행' 또는 '취소'만 가능합니다.";
+    renderState();
+  });
+  renderState();
+
+  /* 퀴즈 */
+  var Q = [
+    {q:"창고 한도가 4,000K인 공장에 9,000K를 주문하면 배는 몇 번 방문할까요?",o:["1번","2번","3번"],a:2,
+     e:"9,000 ÷ 4,000 = 2.25 → 올림해서 3번입니다."},
+    {q:"배가 한국 항구에서 출항을 기다리는 날의 운항비는?",o:["하루 운항비가 그대로 든다","들지 않는다","절반만 든다"],a:1,
+     e:"바다를 다닌 날만 운항비에 포함됩니다."},
+    {q:"'진행' 상태의 주문에서 할 수 있는 일은?",o:["완료 또는 취소","확정으로 되돌리기","아무것도 못 한다"],a:0,
+     e:"진행 → 완료, 진행 → 취소만 가능합니다."},
+    {q:"시뮬레이션 후 확정 전에 기준 정보가 바뀌면?",o:["그대로 확정된다","확정이 거부되고 다시 시뮬레이션해야 한다","자동으로 새 값으로 확정된다"],a:1,
+     e:"오래된 계산으로 확정되는 일을 막기 위해 거부합니다."}
+  ];
+  var score=0, answered=0, quiz=$("quiz");
+  Q.forEach(function(item,qi){
+    var box=document.createElement("div"); box.style.marginBottom="14px";
+    var p=document.createElement("p"); p.innerHTML="<b>Q"+(qi+1)+".</b> "+item.q; box.appendChild(p);
+    var fb=document.createElement("div"); fb.className="muted"; fb.setAttribute("aria-live","polite");
+    var btns=[];
+    item.o.forEach(function(t,oi){
+      var b=document.createElement("button"); b.className="opt"; b.textContent=t;
+      b.addEventListener("click",function(){
+        if(box.dataset.done) return; box.dataset.done="1";
+        answered++;
+        if(oi===item.a){score++; b.classList.add("right"); fb.textContent="정답! "+item.e;}
+        else{b.classList.add("wrong"); btns[item.a].classList.add("right"); fb.textContent="아쉬워요. "+item.e;}
+        $("quizScore").textContent="맞은 개수: "+score+" / "+Q.length+(answered===Q.length?" — 모두 풀었습니다!":"");
+      });
+      btns.push(b); box.appendChild(b);
+    });
+    box.appendChild(fb); quiz.appendChild(box);
+  });
+})();
+</script>
+</body>
+</html>
