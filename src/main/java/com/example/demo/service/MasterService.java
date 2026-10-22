@@ -23,6 +23,8 @@ public class MasterService {
 
 	public static final long WON_PER_EOK = 100_000_000L;
 	private static final int MAX_SHIPS = 4;
+	/** 하루 비용(운항비·공장 운영비) 입력의 상한(억 원). 원 단위 long 계산이 넘치지 않도록 정한다. */
+	private static final long MAX_DAILY_COST_EOK = 1_000;
 
 	private final FactoryRepository factories;
 	private final RouteRepository routes;
@@ -64,7 +66,7 @@ public class MasterService {
 		List<String> errors = new ArrayList<>();
 
 		int shipCount = parseInt(form, "shipCount", "배 척수", 1, MAX_SHIPS, errors);
-		long shipCostWon = parseEok(form.getOrDefault("shipDailyCost", ""), "척당 일 운항비", errors);
+		long shipCostWon = parseEok(form.getOrDefault("shipDailyCost", ""), "척당 일 운항비", MAX_DAILY_COST_EOK, errors);
 
 		Map<Country, int[]> factoryValues = new EnumMap<>(Country.class);
 		Map<Country, Long> unitCosts = new EnumMap<>(Country.class);
@@ -76,10 +78,8 @@ public class MasterService {
 			int cost = parseInt(form, "unitCost_" + c, name + " 셀당 원가", 1, 100_000_000, errors);
 			factoryValues.put(c, new int[] {max, limit});
 			unitCosts.put(c, (long) cost);
-			// 운영비 입력칸이 아예 없는 요청은 기존 값을 그대로 둔다
-			if (form.containsKey("operatingDailyCost_" + c)) {
-				operatingCosts.put(c, parseEok(form.get("operatingDailyCost_" + c), name + " 하루 운영비", errors));
-			}
+			operatingCosts.put(c, parseEok(form.getOrDefault("operatingDailyCost_" + c, ""), name + " 하루 운영비",
+					MAX_DAILY_COST_EOK, errors));
 		}
 
 		List<Country> all = List.of(Country.values());
@@ -101,9 +101,7 @@ public class MasterService {
 			f.setMaxDaily(factoryValues.get(c)[0]);
 			f.setStockLimit(factoryValues.get(c)[1]);
 			f.setUnitCost(unitCosts.get(c));
-			if (operatingCosts.containsKey(c)) {
-				f.setOperatingDailyCost(operatingCosts.get(c));
-			}
+			f.setOperatingDailyCost(operatingCosts.get(c));
 		}
 		for (Route r : routes.findAll()) {
 			r.setDays(days.get(routeKey(r.getFromCountry(), r.getToCountry())));
@@ -114,17 +112,21 @@ public class MasterService {
 		s.bumpMasterVersion();
 	}
 
-	/** 억 원 단위 입력(소수 가능)을 원으로 바꾼다. 올바르지 않으면 이유를 errors 에 담고 0 을 돌려준다. */
-	private static long parseEok(String text, String label, List<String> errors) {
+	/**
+	 * 억 원 단위 입력(소수 가능)을 원으로 바꾼다. 0 보다 크고 maxEok 이하여야 한다. 올바르지 않으면 이유를
+	 * errors 에 담고 0 을 돌려준다.
+	 */
+	private static long parseEok(String text, String label, long maxEok, List<String> errors) {
 		try {
 			BigDecimal eok = new BigDecimal(text.trim());
-			BigDecimal won = eok.multiply(BigDecimal.valueOf(WON_PER_EOK));
 			if (eok.signum() <= 0) {
 				errors.add(label + "는 0보다 커야 합니다");
-			} else if (won.stripTrailingZeros().scale() > 0) {
+			} else if (eok.compareTo(BigDecimal.valueOf(maxEok)) > 0) {
+				errors.add("%s는 %,d억 원 이하여야 합니다".formatted(label, maxEok));
+			} else if (eok.multiply(BigDecimal.valueOf(WON_PER_EOK)).stripTrailingZeros().scale() > 0) {
 				errors.add(label + "는 원 단위로 떨어지는 값이어야 합니다");
 			} else {
-				return won.longValueExact();
+				return eok.multiply(BigDecimal.valueOf(WON_PER_EOK)).longValueExact();
 			}
 		} catch (NumberFormatException | ArithmeticException e) {
 			errors.add(label + "(억 원)는 숫자로 입력하세요");

@@ -14,12 +14,15 @@ import org.junit.jupiter.api.Test;
 
 class PlannerTest {
 
+	/** 하루 운영비 10억 원. 테스트가 값을 직접 정한다. */
+	private static final long OPERATING_DAILY = 1_000_000_000L;
+
 	private static Master master(int ships) {
 		return new Master(1, ships, 100_000_000L,
-				List.of(new FactoryParam(Country.CHINA, 400, 4000, 700),
-						new FactoryParam(Country.JAPAN, 800, 2000, 900),
-						new FactoryParam(Country.VIETNAM, 200, 10000, 550),
-						new FactoryParam(Country.INDONESIA, 300, 7000, 450)),
+				List.of(new FactoryParam(Country.CHINA, 400, 4000, 700, OPERATING_DAILY),
+						new FactoryParam(Country.JAPAN, 800, 2000, 900, OPERATING_DAILY),
+						new FactoryParam(Country.VIETNAM, 200, 10000, 550, OPERATING_DAILY),
+						new FactoryParam(Country.INDONESIA, 300, 7000, 450, OPERATING_DAILY)),
 				List.of(new RouteParam(Country.KOREA, Country.CHINA, 1),
 						new RouteParam(Country.KOREA, Country.JAPAN, 2),
 						new RouteParam(Country.KOREA, Country.VIETNAM, 5),
@@ -158,7 +161,6 @@ class PlannerTest {
 
 	// ---------------------------------------------------------------- 공장 운영비
 
-	private static final long OPERATING_DAILY = Master.DEFAULT_OPERATING_DAILY_COST_WON;
 
 	private static int lastProductionDay(Plan plan, Country c) {
 		int[] pr = plan.production().get(c);

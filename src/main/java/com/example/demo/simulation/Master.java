@@ -7,16 +7,12 @@ import java.util.List;
 public record Master(long version, int shipCount, long shipDailyCostWon, List<FactoryParam> factories,
 		List<RouteParam> routes) {
 
-	/** 하루 운영비 기본값: 10억 원 */
-	public static final long DEFAULT_OPERATING_DAILY_COST_WON = 1_000_000_000L;
-
-	/** operatingDailyCostWon: 공장 하루 운영비(원). 이 값이 없던 때 저장된 계획의 스냅샷에서는 0 으로 읽힌다. */
+	/**
+	 * operatingDailyCostWon: 공장 하루 운영비(원). 서버는 저장된 주문의 planJson 을 JsonNode 로만 읽고 이
+	 * 레코드로 되살리지 않는다. 운영비가 없던 때 확정한 주문은 화면(planview.js)이 운영비를 '-' 로 표시한다.
+	 */
 	public record FactoryParam(Country country, int maxDaily, int stockLimit, long unitCost,
 			long operatingDailyCostWon) {
-
-		public FactoryParam(Country country, int maxDaily, int stockLimit, long unitCost) {
-			this(country, maxDaily, stockLimit, unitCost, DEFAULT_OPERATING_DAILY_COST_WON);
-		}
 	}
 
 	public record RouteParam(Country from, Country to, int days) {

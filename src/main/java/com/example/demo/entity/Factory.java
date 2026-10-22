@@ -27,9 +27,15 @@ public class Factory {
 	@Column(nullable = false)
 	private long unitCost;
 
-	/** 하루 운영비(원). 기본 10억 원 */
-	@Column(nullable = false, columnDefinition = "bigint default 1000000000")
-	private long operatingDailyCost = 1_000_000_000L;
+	/**
+	 * 하루 운영비(원). 새 공장은 생성자가 값을 정한다. columnDefinition 의 default 는 ddl-auto=update 로
+	 * 기존 DB 에 이 컬럼을 추가할 때 이미 있는 행을 채우기 위한 것이다.
+	 */
+	@Column(nullable = false, columnDefinition = "bigint default " + DEFAULT_OPERATING_DAILY_COST_WON)
+	private long operatingDailyCost;
+
+	/** 하루 운영비 기본값: 10억 원. 초기 데이터와 기존 행 채움이 같은 값을 쓴다. */
+	public static final long DEFAULT_OPERATING_DAILY_COST_WON = 1_000_000_000L;
 
 	protected Factory() {
 	}

@@ -194,7 +194,8 @@ class OrderFlowTests {
 		var form = post("/master").session(s)
 				.param("shipCount", "3").param("shipDailyCost", "1.5");
 		for (String c : new String[] {"CHINA", "JAPAN", "VIETNAM", "INDONESIA"}) {
-			form.param("maxDaily_" + c, "500").param("stockLimit_" + c, "5000").param("unitCost_" + c, "600");
+			form.param("maxDaily_" + c, "500").param("stockLimit_" + c, "5000").param("unitCost_" + c, "600")
+					.param("operatingDailyCost_" + c, "10");
 		}
 		String[] all = {"KOREA", "CHINA", "JAPAN", "VIETNAM", "INDONESIA"};
 		for (int i = 0; i < all.length; i++) {
@@ -207,6 +208,50 @@ class OrderFlowTests {
 		assertThat(orderService.getOrder(id).getPlanJson()).isEqualTo(before);
 		mvc.perform(get("/api/master").session(s))
 				.andExpect(jsonPath("$.shipDailyCostWon").value(150_000_000));
+	}
+
+	private String masterFormError(MockHttpSession s, String operatingDailyCost) throws Exception {
+		var form = post("/master").session(s).param("shipCount", "3").param("shipDailyCost", "1");
+		for (String c : new String[] {"CHINA", "JAPAN", "VIETNAM", "INDONESIA"}) {
+			form.param("maxDaily_" + c, "500").param("stockLimit_" + c, "5000").param("unitCost_" + c, "600")
+					.param("operatingDailyCost_" + c, operatingDailyCost);
+		}
+		String[] all = {"KOREA", "CHINA", "JAPAN", "VIETNAM", "INDONESIA"};
+		for (int i = 0; i < all.length; i++) {
+			for (int j = i + 1; j < all.length; j++) {
+				form.param("days_" + all[i] + "_" + all[j], "3");
+			}
+		}
+		return mvc.perform(form).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+	}
+
+	@Test
+	void masterWithoutOperatingCostIsRejected() throws Exception {
+		MockHttpSession s = login();
+		// 다른 공장 값과 마찬가지로 하루 운영비도 필수다. 빠져 있으면 아무것도 저장하지 않는다
+		var form = post("/master").session(s).param("shipCount", "2").param("shipDailyCost", "1");
+		for (String c : new String[] {"CHINA", "JAPAN", "VIETNAM", "INDONESIA"}) {
+			form.param("maxDaily_" + c, "500").param("stockLimit_" + c, "5000").param("unitCost_" + c, "600");
+		}
+		String[] all = {"KOREA", "CHINA", "JAPAN", "VIETNAM", "INDONESIA"};
+		for (int i = 0; i < all.length; i++) {
+			for (int j = i + 1; j < all.length; j++) {
+				form.param("days_" + all[i] + "_" + all[j], "3");
+			}
+		}
+		String body = mvc.perform(form).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+		assertThat(body).contains("하루 운영비");
+		mvc.perform(get("/api/master").session(s)).andExpect(jsonPath("$.shipCount").value(3));
+	}
+
+	@Test
+	void operatingCostAboveLimitIsRejectedWithRangeMessage() throws Exception {
+		MockHttpSession s = login();
+		// 매우 큰 값은 숫자가 아니라는 메시지가 아니라 범위 초과로 알린다
+		assertThat(masterFormError(s, "1001")).contains("1,000억 원 이하");
+		assertThat(masterFormError(s, "99999999999999999999")).contains("1,000억 원 이하");
+		assertThat(masterFormError(s, "abc")).contains("숫자로 입력하세요");
+		mvc.perform(get("/api/master").session(s)).andExpect(jsonPath("$.shipCount").value(3));
 	}
 
 	@Test
