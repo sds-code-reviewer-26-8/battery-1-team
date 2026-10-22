@@ -15,10 +15,6 @@
 		try {
 			const res = await postJson('/api/orders/' + id + '/status', {status, version});
 			message = res.message;
-			if (status == 'CANCELED') {
-				location.href = '/orders';
-				return;
-			}
 		} catch (e) {
 			error = e.message;
 		}

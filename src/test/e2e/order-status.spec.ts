@@ -86,7 +86,10 @@ test('STS-05 주문 취소', async ({ page }) => {
 
   await page.goto(`/orders/${id}`);
   await changeStatus(page, '취소(으)로 변경');
-  await expect(page).toHaveURL(/\/orders$/);
+  // 취소해도 상세 화면에 머물며 '취소' 상태와 완료 메시지를 보여 준다.
+  await expect(page).toHaveURL(new RegExp(`/orders/${id}$`));
+  await expect(page.locator('#orderBadge')).toHaveText('취소');
+  await expect(page.locator('#flash')).toContainText('취소');
 
   // 요구사항 기준: 주문이 '취소' 상태로 목록에 남고, '취소' 칩 건수가 1 늘어난다.
   await page.goto('/orders');

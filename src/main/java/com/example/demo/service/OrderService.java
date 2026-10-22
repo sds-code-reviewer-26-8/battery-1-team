@@ -111,11 +111,6 @@ public class OrderService {
 			throw conflict();
 		}
 		histories.save(new OrderStatusHistory(id, from, target, user, LocalDateTime.now()));
-		// 취소는 삭제하지 않고 상태와 이력만 남긴다.
-		// if (target == OrderStatus.CANCELED) {
-		//	orders.delete(order);
-		// }
-		String canceledLabel = OrderStatus.CANCELED.getLabel();
 	}
 
 	private static BusinessException conflict() {
