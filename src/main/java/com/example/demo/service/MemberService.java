@@ -8,6 +8,7 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.security.spec.KeySpec;
 import java.util.Base64;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
@@ -21,6 +22,7 @@ public class MemberService {
 
 	public static final String ADMIN = "admin";
 	static final int MIN_PASSWORD_LENGTH = 4;
+	static final int MAX_PASSWORD_LENGTH = 64;
 	private static final Pattern USERNAME = Pattern.compile("[A-Za-z0-9_]{3,20}");
 	private static final int ITERATIONS = 120_000;
 	private static final SecureRandom RANDOM = new SecureRandom();
@@ -40,7 +42,11 @@ public class MemberService {
 		if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
 			throw new BusinessException("비밀번호는 " + MIN_PASSWORD_LENGTH + "자 이상이어야 합니다");
 		}
-		if (ADMIN.equalsIgnoreCase(name) || members.existsByUsername(name)) {
+		if (password.length() > MAX_PASSWORD_LENGTH) {
+			throw new BusinessException("비밀번호는 " + MAX_PASSWORD_LENGTH + "자 이하여야 합니다");
+		}
+		name = name.toLowerCase(Locale.ROOT);
+		if (ADMIN.equals(name) || members.existsByUsername(name)) {
 			throw new BusinessException("이미 사용 중인 아이디입니다");
 		}
 		byte[] salt = new byte[16];
@@ -61,7 +67,7 @@ public class MemberService {
 		if (ADMIN.equals(username) && ADMIN.equals(password)) {
 			return true;
 		}
-		return members.findByUsername(username).map(m -> {
+		return members.findByUsername(username.trim().toLowerCase(Locale.ROOT)).map(m -> {
 			String actual = hash(password, Base64.getDecoder().decode(m.getSalt()));
 			return MessageDigest.isEqual(actual.getBytes(StandardCharsets.UTF_8),
 					m.getPasswordHash().getBytes(StandardCharsets.UTF_8));

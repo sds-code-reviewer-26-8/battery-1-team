@@ -41,6 +41,16 @@ test.describe('회원가입', () => {
 		await expect(page).toHaveURL(/\/signup$/);
 	});
 
+	test('SIGNUP-06 대소문자만 다른 아이디는 중복으로 거부', async ({ page }) => {
+		const username = uniqueName();
+		await signup(page, username, 'pw1234');
+		await expect(page).toHaveURL(/\/login$/);
+
+		await signup(page, username.toUpperCase(), 'pw1234');
+		await expect(page.locator('#signupError')).toHaveText('이미 사용 중인 아이디입니다');
+		await expect(page).toHaveURL(/\/signup$/);
+	});
+
 	test('SIGNUP-03 4자 미만 비밀번호는 거부', async ({ page }) => {
 		await signup(page, uniqueName(), 'abc');
 		await expect(page.locator('#signupError')).toHaveText('비밀번호는 4자 이상이어야 합니다');
