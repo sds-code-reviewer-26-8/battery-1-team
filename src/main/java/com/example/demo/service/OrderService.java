@@ -42,7 +42,7 @@ public class OrderService {
 	 */
 	@Transactional
 	public Order confirm(Map<Country, Integer> requested, String routeType, long masterVersion, String memo,
-			String user) {
+			String customerName, String user) {
 		SimulationResult result = simulationService.simulate(requested);
 		if (result.master().version() != masterVersion) {
 			throw new BusinessException("시뮬레이션 이후 마스터 데이터가 바뀌었습니다. 다시 시뮬레이션해 주세요", true);
@@ -61,7 +61,7 @@ public class OrderService {
 		int totalK = result.orders().values().stream().mapToInt(Integer::intValue).sum();
 		LocalDateTime now = LocalDateTime.now();
 		Order order = orders.save(new Order(now, user, totalK, plan.type(), plan.label(), plan.totalDays(),
-				plan.productionCost(), plan.shippingCost(), plan.totalCost(), note, json.writeValueAsString(stored)));
+				plan.productionCost(), plan.shippingCost(), plan.totalCost(), note, customerName, json.writeValueAsString(stored)));
 		histories.save(new OrderStatusHistory(order.getId(), null, OrderStatus.CONFIRMED, user, now));
 		return order;
 	}
@@ -111,6 +111,26 @@ public class OrderService {
 			throw conflict();
 		}
 		histories.save(new OrderStatusHistory(id, from, target, user, LocalDateTime.now()));
+	}
+
+	/**
+	 * 고객사 이름을 바꾼다. 확정·진행 상태에서만 가능하고, 주문 version(마스터 version 과 별개)이 다르면 거부한다.
+	 */
+	@Transactional
+	public void changeCustomerName(Long id, String customerName, long expectedVersion) {
+		Order order = getOrder(id);
+		if (order.getVersion() != expectedVersion) {
+			throw conflict();
+		}
+		if (order.getStatus().next().isEmpty()) {
+			throw new BusinessException("%s 상태의 주문은 고객사 이름을 바꿀 수 없습니다".formatted(order.getStatus().getLabel()));
+		}
+		order.setCustomerName(customerName);
+		try {
+			orders.saveAndFlush(order);
+		} catch (ObjectOptimisticLockingFailureException e) {
+			throw conflict();
+		}
 	}
 
 	private static BusinessException conflict() {

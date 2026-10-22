@@ -21,6 +21,17 @@
 		await load(message, error);
 	}
 
+	async function changeCustomer(customerName, version) {
+		let message = null, error = null;
+		try {
+			const res = await postJson('/api/orders/' + id + '/customer', {customerName, version});
+			message = res.message;
+		} catch (e) {
+			error = e.message;
+		}
+		await load(message, error);
+	}
+
 	function render(o) {
 		document.getElementById('orderId').textContent = '#' + o.id;
 		document.getElementById('orderBadge').className = 'badge badge-' + o.status;
@@ -29,7 +40,17 @@
 		const meta = (label, value) => h('div', null, h('dt', null, label), h('dd', null, value));
 		document.getElementById('meta').replaceChildren(
 			meta('확정 일시', o.confirmedAt), meta('작성자', o.createdBy), meta('경로', o.routeLabel),
+			meta('고객사', o.customerName != null ? o.customerName : '-'),
 			meta('메모', o.memo != null ? o.memo : '-'));
+
+		const customerForm = document.getElementById('customerForm');
+		customerForm.hidden = !o.editable;
+		const customerInput = document.getElementById('customerName');
+		customerInput.value = o.customerName != null ? o.customerName : '';
+		customerForm.onsubmit = e => {
+			e.preventDefault();
+			changeCustomer(customerInput.value, o.version);
+		};
 
 		const actions = document.getElementById('actions');
 		actions.replaceChildren();

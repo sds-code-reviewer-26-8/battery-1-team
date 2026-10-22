@@ -28,6 +28,7 @@
 			h('td', {class: 'num'}, o.totalDays),
 			h('td', {class: 'num'}, o.totalCostEok),
 			h('td', null, h('span', {class: 'badge badge-' + o.status}, o.statusLabel)),
+			h('td', null, o.customerName || ''),
 			h('td', null, o.createdBy));
 		tr.addEventListener('click', () => {
 			location.href = '/orders/' + o.id;
@@ -35,6 +36,6 @@
 		rows.append(tr);
 	}
 	if (data.orders.length === 0) {
-		rows.append(h('tr', null, h('td', {colspan: '8', class: 'empty'}, '주문이 없습니다.')));
+		rows.append(h('tr', null, h('td', {colspan: '9', class: 'empty'}, '주문이 없습니다.')));
 	}
 })();
