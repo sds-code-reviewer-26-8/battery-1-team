@@ -6,6 +6,7 @@ import com.example.demo.entity.Order;
 import com.example.demo.entity.OrderStatus;
 import com.example.demo.entity.OrderStatusHistory;
 import com.example.demo.service.BusinessException;
+import com.example.demo.service.DueDays;
 import com.example.demo.service.OrderService;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
@@ -32,6 +33,9 @@ public class OrderController {
 			JsonNode dueDays) {
 	}
 
+	public record DueRule(int min, int max, String message) {
+	}
+
 	public record StatusRequest(OrderStatus status, long version) {
 	}
 
@@ -54,9 +58,9 @@ public class OrderController {
 	}
 
 	public record OrderDetail(Long id, String status, String statusLabel, List<StatusOption> next,
-			String confirmedAt, String createdBy, String routeLabel, String memo, Integer dueDays, long version,
+			String confirmedAt, String createdBy, String routeLabel, String memo, long version,
 			JsonNode plan,
-			List<HistoryRow> history) {
+			List<HistoryRow> history, Integer dueDays) {
 	}
 
 	private static final DateTimeFormatter MINUTE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -93,6 +97,12 @@ public class OrderController {
 				Arrays.stream(OrderStatus.values()).map(StatusOption::of).toList());
 	}
 
+	@GetMapping("/api/orders/due-rule")
+	@ResponseBody
+	public DueRule dueRule() {
+		return new DueRule(DueDays.MIN, DueDays.MAX, DueDays.MESSAGE);
+	}
+
 	@GetMapping("/api/orders/{id}")
 	@ResponseBody
 	public ResponseEntity<?> detail(@PathVariable Long id) {
@@ -101,8 +111,8 @@ public class OrderController {
 			List<HistoryRow> history = service.history(id).stream().map(OrderController::toHistoryRow).toList();
 			return ResponseEntity.ok(new OrderDetail(o.getId(), o.getStatus().name(), o.getStatus().getLabel(),
 					o.getStatus().next().stream().map(StatusOption::of).toList(), format(o.getConfirmedAt(), MINUTE),
-					o.getCreatedBy(), o.getRouteLabel(), o.getMemo(), o.getDueDays(), o.getVersion(),
-					json.readTree(o.getPlanJson()), history));
+					o.getCreatedBy(), o.getRouteLabel(), o.getMemo(), o.getVersion(),
+					json.readTree(o.getPlanJson()), history, o.getDueDays()));
 		} catch (BusinessException e) {
 			return ApiErrors.of(e);
 		} catch (JacksonException e) {
@@ -131,7 +141,7 @@ public class OrderController {
 		if (due != null && !due.isNull()) {
 			// 납기는 정수만 받는다. 7.5 를 7 로, "10" 을 10 으로 바꿔 저장하지 않고 거부한다.
 			if (!due.isIntegralNumber() || !due.canConvertToInt()) {
-				return ResponseEntity.badRequest().body(Map.of("error", "납기일은 5일 이상 50일 이하의 정수로 입력하세요.", "conflict", false));
+				return ResponseEntity.badRequest().body(Map.of("error", DueDays.MESSAGE, "conflict", false));
 			}
 			dueDays = due.intValue();
 		}

@@ -18,6 +18,8 @@
 	const dueWrap = document.getElementById('dueWrap');
 	const dueInput = document.getElementById('dueDays');
 	const dueError = document.getElementById('dueError');
+	let dueRule = null;                // 서버가 알려주는 납기 범위·문구 (로딩 전에는 체크박스를 막는다)
+	asap.disabled = true;
 
 	// ---- 게이지
 
@@ -97,18 +99,18 @@
 
 	// ---- 납기일 (초과 표시에 쓰고, 선택했으면 확정 시 함께 저장한다)
 
-	/** 적용할 납기일(일). 체크가 꺼져 있거나 5~50 범위를 벗어나면 null */
+	/** 적용할 납기일(일). 체크가 꺼져 있거나 서버가 정한 범위를 벗어나면 null */
 	function dueLimit() {
-		if (!asap.checked) return null;
+		if (!asap.checked || !dueRule) return null;
 		const v = Number(dueInput.value);
-		return Number.isInteger(v) && v >= 5 && v <= 50 ? v : null;
+		return Number.isInteger(v) && v >= dueRule.min && v <= dueRule.max ? v : null;
 	}
 
 	/** 이미 그려진 결과에 납기 초과 표시만 다시 입힌다(시뮬레이션·애니메이션은 그대로) */
 	function applyDue() {
 		const limit = dueLimit();
 		if (asap.checked && limit === null) {
-			showError(dueError, '납기일은 5일 이상 50일 이하의 정수로 입력하세요.');
+			showError(dueError, dueRule.message);
 		} else {
 			dueError.hidden = true;
 		}
@@ -204,7 +206,7 @@
 		if (!result) return;
 		confirmError.hidden = true;
 		if (asap.checked && dueLimit() === null) {
-			showError(confirmError, '납기일은 5일 이상 50일 이하의 정수로 입력하세요.');
+			showError(confirmError, dueRule.message);
 			return;
 		}
 		const limit = dueLimit();
@@ -233,6 +235,13 @@
 
 	values = even(total);
 	buildGauges();
+	fetch('/api/orders/due-rule').then(r => r.json()).then(rule => {
+		dueRule = rule;
+		dueInput.min = rule.min;
+		dueInput.max = rule.max;
+		dueInput.value = rule.min;
+		asap.disabled = false;
+	}).catch(() => { /* 범위를 못 받으면 납기 체크박스는 막아 둔다 */ });
 	fetch('/api/master').then(r => r.json()).then(m => {
 		master = m;
 		refreshGauges();

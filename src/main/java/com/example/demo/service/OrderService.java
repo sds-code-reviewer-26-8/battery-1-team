@@ -22,8 +22,6 @@ import tools.jackson.databind.ObjectMapper;
 public class OrderService {
 
 	private static final int MAX_MEMO = 1000;
-	private static final int MIN_DUE_DAYS = 5;
-	private static final int MAX_DUE_DAYS = 50;
 
 	private final SimulationService simulationService;
 	private final OrderRepository orders;
@@ -45,8 +43,8 @@ public class OrderService {
 	@Transactional
 	public Order confirm(Map<Country, Integer> requested, String routeType, long masterVersion, String memo,
 			Integer dueDays, String user) {
-		if (dueDays != null && (dueDays < MIN_DUE_DAYS || dueDays > MAX_DUE_DAYS)) {
-			throw new BusinessException("납기일은 %d일 이상 %d일 이하의 정수로 입력하세요".formatted(MIN_DUE_DAYS, MAX_DUE_DAYS));
+		if (dueDays != null && !DueDays.inRange(dueDays)) {
+			throw new BusinessException(DueDays.MESSAGE);
 		}
 		SimulationResult result = simulationService.simulate(requested);
 		if (result.master().version() != masterVersion) {
