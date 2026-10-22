@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>영역 판정 보고서</title>
+<style>
+  :root {
+    --bg: #f5f7fa; --card: #ffffff; --text: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --accent: #2563eb; --accent-soft: #dbeafe;
+    --ok: #15803d; --ok-soft: #dcfce7; --warn: #b45309; --warn-soft: #fef3c7;
+    --bad: #b91c1c; --bad-soft: #fee2e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111827; --card: #1f2937; --text: #f3f4f6; --muted: #9ca3af; --line: #374151;
+      --accent: #60a5fa; --accent-soft: #1e3a5f;
+      --ok: #4ade80; --ok-soft: #14532d; --warn: #fbbf24; --warn-soft: #78350f;
+      --bad: #f87171; --bad-soft: #7f1d1d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.6;
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; }
+  header, main { max-width: 900px; margin: 0 auto; padding: 0 16px; }
+  header { padding-top: 24px; }
+  main { padding-bottom: 32px; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 10px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .step { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none; }
+  .badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+  .badge.PASS, .badge.yes, .badge.GREEN { background: var(--ok-soft); color: var(--ok); }
+  .badge.no, .badge.FAIL, .badge.RED { background: var(--bad-soft); color: var(--bad); }
+  .badge.warn, .badge.YELLOW { background: var(--warn-soft); color: var(--warn); }
+  .meta { color: var(--muted); font-size: 13px; }
+  .label { color: var(--muted); font-size: 12px; margin: 12px 0 2px; }
+  ul { margin: 4px 0; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  code { font-family: Consolas, "D2Coding", monospace; font-size: 13px; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+  details { margin: 2px 0; }
+  summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+  .evidence { white-space: pre-wrap; background: var(--bg); border-radius: 8px; padding: 8px 10px; margin-top: 4px; font-size: 13px; }
+  .req { white-space: pre-wrap; background: var(--bg); border-radius: 8px; padding: 10px 12px; margin: 8px 0 0; }
+  a { color: var(--accent); }
+  .none { color: var(--muted); }
+  .links a { margin-right: 14px; }
+
+  /* 영역 판정 */
+  .zone { border-width: 2px; }
+  .zone.GREEN { border-color: var(--ok); }
+  .zone.YELLOW { border-color: var(--warn); }
+  .zone.RED { border-color: var(--bad); }
+  .zone-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .zone-dot { width: 22px; height: 22px; border-radius: 50%; flex: none; }
+  .zone-dot.GREEN { background: var(--ok); }
+  .zone-dot.YELLOW { background: var(--warn); }
+  .zone-dot.RED { background: var(--bad); }
+  .zone-name { font-size: 20px; font-weight: 800; }
+  .zone-name.GREEN { color: var(--ok); }
+  .zone-name.YELLOW { color: var(--warn); }
+  .zone-name.RED { color: var(--bad); }
+  .zone-summary { font-size: 17px; font-weight: 700; margin: 10px 0 0; }
+  .todo { border-radius: 8px; padding: 10px 12px; margin-top: 6px; }
+  .todo.GREEN { background: var(--ok-soft); }
+  .todo.YELLOW { background: var(--warn-soft); }
+  .todo.RED { background: var(--bad-soft); }
+  .todo ul { margin: 2px 0; }
+  .signals td:first-child { white-space: nowrap; }
+  .headline { font-size: 18px; font-weight: 700; margin: 8px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>영역 판정 보고서</h1>
+  <p class="sub" id="sub">루프의 결과를 Green · Yellow · Red 로 판정한 요약입니다.</p>
+</header>
+<main id="view"></main>
+
+<script>
+// 보고서 한 건. build-triage-report.cjs 가 실행할 때마다 이 자리에 JSON 을 넣어 새 HTML 을 만든다.
+var report = {"id": "TASK-002", "loop": "im", "round": 1, "createdAt": "2026-10-22 00:00", "request": "", "result": "PASS", "headline": "납기 선택 시 Order.dueDays에 저장·표시, 미선택은 NULL. 모든 테스트 통과.", "changedFiles": ["src/main/java/com/example/demo/entity/Order.java", "src/main/java/com/example/demo/service/OrderService.java", "src/main/java/com/example/demo/controller/OrderController.java", "src/main/resources/static/js/order-new.js", "src/main/resources/static/js/order-detail.js", "src/main/resources/static/js/orders.js", "src/main/resources/static/pages/orders.html", "src/test/java/com/example/demo/OrderFlowTests.java", "src/test/e2e/delivery-date.spec.ts", "src/test/e2e/journey-full-flow.spec.ts", "src/test/e2e/order-confirm.spec.ts", "src/test/e2e/orders-list.spec.ts", "docs/understand/김도현/prd_implement.md"], "remainingIssues": ["docs/INTENT.md의 납기 문구와 PRD가 어긋날 수 있음(INTENT는 수정하지 않기로 함)", "병렬 실행에서 master.spec 1건이 한 번 실패했다는 implement 보고는 원인 미확인(이번 workers=1 실행은 전부 통과)"], "nextStep": "refactoring 단계로 진행", "precheckFile": "../TASK-002-prepare/precheck.html", "triage": {"zone": "YELLOW", "summary": "주문 엔티티 컬럼 추가와 확정 API 검증 변경, 기존 E2E 열 번호 수정이 있어 꼼꼼한 확인 권장", "reasons": ["DB 컬럼 추가(ddl-auto=update)로 기존 데이터 영향 확인이 실제 운영 DB에서는 이뤄지지 않음", "기존 E2E 3개 파일의 기대값(열 번호)이 구현과 함께 수정됨", "결제·권한 등 민감 영역은 아님"], "signals": [{"label": "테스트 충분성", "level": "GREEN", "note": "저장·NULL·범위·계산 불변 Java 4건과 E2E 신규 3건"}, {"label": "스키마 변경", "level": "YELLOW", "note": "Order에 dueDays 컬럼 추가"}, {"label": "기존 테스트 수정", "level": "YELLOW", "note": "E2E 열 번호·헤더 기대값 수정"}, {"label": "민감 영역", "level": "GREEN", "note": "인증·결제·권한 변경 없음"}], "actions": ["Order.java 컬럼 추가와 OrderController 검증 diff 확인"]}, "verify": {"points": ["새 Java 테스트 4건 추가(OrderFlowTests: 저장·표시, NULL, 4/51 거부, 계산 불변)", "E2E 신규 3건(delivery-date.spec.ts), 기존 E2E 3개 파일 열 번호 기대값 변경(납기 열 추가 때문)"], "checklist": [{"title": "납기 체크 + 7일 확정 시 상세에 납기 7일 표시 (E2E)", "passed": true, "evidence": "delivery-date.spec.ts 납기일을 넘는 경로도 주문 확정 / 저장 케이스 통과, 51 passed"}, {"title": "납기 미체크 확정 시 상세·목록 '-' (E2E)", "passed": true, "evidence": "delivery-date.spec.ts '납기를 선택하지 않고 확정하면 ... -' 통과"}, {"title": "dueDays 5·50 저장, 4·51 거부 (Java)", "passed": true, "evidence": "OrderFlowTests dueDaysIsSavedAndShownInDetailAndList, dueDaysOutOfRangeIsRejected 통과. 기대값을 틀리게 바꾸면 실패 확인 후 원복"}, {"title": "dueDays 생략 시 기존처럼 확정, DB NULL (Java)", "passed": true, "evidence": "dueDaysIsNullWhenOmittedOrNull 통과"}, {"title": "납기 초과 경로도 확정되고 납기 저장 (E2E/Java)", "passed": true, "evidence": "E2E '납기일을 넘는 경로도 주문 확정이 된다' 통과"}, {"title": "목록 납기 열 표시, 기존 목록·상태 필터 유지 (E2E)", "passed": true, "evidence": "orders-list.spec.ts LIST-01~04 통과"}, {"title": "납기 유무와 무관하게 총비용·소요일수·경로 동일 (Java)", "passed": true, "evidence": "dueDaysDoesNotChangeServerCalculation 통과"}, {"title": "./gradlew test와 기존 E2E 모두 통과", "passed": true, "evidence": "gradlew cleanTest test 29건 통과, playwright 51건 통과"}], "criteria": [{"criterion": "납기 선택 시 저장, 미선택 시 NULL", "passed": true, "evidence": "Java·E2E 통과"}, {"criterion": "범위(5~50) 밖은 거부", "passed": true, "evidence": "서버 400, 화면 차단 E2E 통과"}], "regression": [{"name": "Unit(Java)", "command": "./gradlew cleanTest test", "total": 29, "passed": 29, "failed": 0, "skipped": 0}, {"name": "E2E(Regression 포함)", "command": "BASE_URL=http://localhost:8081 npx playwright test --workers=1", "total": 51, "passed": 51, "failed": 0, "skipped": 0}], "notRun": ["README 등 다른 문서의 납기 문구 확인은 하지 않음"]}, "refactoring": {"summary": "코드는 수정하지 않고 점검만 했습니다. 요구사항·INTENT를 어기는 결함은 없었고, 납기 범위 중복·긴 생성자 인자·열 번호 의존 테스트 3가지를 제안합니다.", "proposals": [{"title": "납기 범위(5~50) 규칙의 중복 제거", "target": "src/main/java/com/example/demo/service/OrderService.java, src/main/resources/static/js/order-new.js", "description": "서버 MIN/MAX_DUE_DAYS와 화면 dueLimit()·오류 문구에 5, 50이 따로 하드코딩되어 있어, 한곳에서 정의해 화면이 받아 쓰게 한다.", "benefit": "범위가 바뀔 때 서버·화면이 어긋나는 일을 막는다.", "risk": "동작 변경 없음(값 유지). 기존 Java 4/51 거부 테스트와 E2E 범위 밖 차단 테스트로 보존 확인 가능. 화면에 값을 내려주려면 API 추가가 필요해 범위가 조금 커질 수 있음(추정)."}, {"title": "확정 요청 인자를 객체로 묶고 납기 검증 분리", "target": "src/main/java/com/example/demo/service/OrderService.java, src/main/java/com/example/demo/entity/Order.java", "description": "confirm()이 6개, Order 생성자가 12개 위치 인자를 받아 dueDays 추가로 더 길어졌다. 입력은 ConfirmCommand로 묶고 납기 검증은 private validateDueDays로 뺀다.", "benefit": "같은 타입(Integer, String) 인자의 순서 실수를 줄이고 confirm()의 흐름이 읽기 쉬워진다.", "risk": "동작 변경 없음. 호출부가 컨트롤러와 테스트 몇 곳이라 되돌리기 쉽고, 기존 OrderFlowTests 29건으로 확인 가능."}, {"title": "E2E의 열 번호 의존 단언을 헤더 기반으로 정리", "target": "src/test/e2e/order-confirm.spec.ts, src/test/e2e/orders-list.spec.ts, src/test/e2e/journey-full-flow.spec.ts", "description": "납기 열 추가로 열 번호 기대값을 일괄 수정해야 했다(구현 중 7건 실패). 열 인덱스 대신 헤더 이름으로 셀을 찾는 헬퍼를 둔다.", "benefit": "이후 열이 추가·이동돼도 테스트가 깨지지 않는다.", "risk": "제품 코드 영향 없음. 테스트만 바뀌므로 51건 E2E 재실행으로 확인 가능. 헬퍼 오작동으로 단언이 약해질 수 있어 기대값을 틀리게 바꿔 실패하는지 확인 필요."}], "checkedFiles": ["src/main/java/com/example/demo/entity/Order.java", "src/main/java/com/example/demo/service/OrderService.java", "src/main/java/com/example/demo/controller/OrderController.java", "src/main/resources/static/js/order-new.js", "src/main/resources/static/js/order-detail.js", "src/main/resources/static/js/orders.js", "src/main/resources/static/pages/orders.html"]}};
+</script>
+<script>
+(function () {
+  var PREPARE_LOGS = '../../logs/prepare/'; // 이 페이지 기준 상대 경로
+  var VERIFY_LOGS = '../../logs/verify/';
+  var view = document.getElementById('view');
+
+  // 영역별 정의와 "해야 할 작업"의 기본 문구. 판정 기준은 팀이 정한 것이라 데이터가 아니라 템플릿에 고정한다.
+  var ZONES = {
+    GREEN: {
+      name: 'Green',
+      meaning: ['테스트가 충분하고, 구조가 잘 분리되어 있음', '코드 흐름을 파악하고 있고, 위험도가 낮은 영역'],
+      todo: ['Inner Loop 를 믿고, Evidence 를 가볍게 살펴본다']
+    },
+    YELLOW: {
+      name: 'Yellow',
+      meaning: ['품질이 고르지 않은 느낌 (감각적으로 불안하거나 의심이 되는 곳)', '인지 부채가 생기는 곳 / 기존 테스트를 완전히 믿기 어려운 곳'],
+      todo: ['Evidence 를 더 꼼꼼하게 살펴본다', 'Diff 요약을 리뷰한다', '테스트 보강을 제안한다']
+    },
+    RED: {
+      name: 'Red',
+      meaning: ['인증, 결제, 권한, 급여 등 민감한 영역', '도메인 지식이 필요한 곳'],
+      todo: ['Inner Loop 의 모든 Step 을 꼼꼼히 리뷰한다']
+    }
+  };
+  var LEVEL = { GREEN: 'GREEN', YELLOW: 'YELLOW', RED: 'RED' };
+
+  // 데이터는 모두 textContent 로 넣는다(문자열을 HTML 로 해석하지 않는다).
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+  function arr(x) { return Array.isArray(x) ? x : []; }
+  function badge(text, cls) { return el('span', 'badge ' + cls, text); }
+  function card(num, title, extra) {
+    var c = el('section', 'card' + (extra ? ' ' + extra : ''));
+    var h = el('h2');
+    if (num) h.appendChild(el('span', 'step', String(num)));
+    h.appendChild(document.createTextNode(title));
+    c.appendChild(h);
+    return c;
+  }
+  function list(items) {
+    var ul = el('ul');
+    items.forEach(function (t) { ul.appendChild(el('li', null, t)); });
+    return ul;
+  }
+  function label(parent, text) { parent.appendChild(el('div', 'label', text)); }
+  function link(href, text) {
+    var a = el('a', null, text);
+    a.href = encodeURI(href);
+    return a;
+  }
+  function evidence(text) {
+    var d = el('details');
+    d.appendChild(el('summary', null, '근거 보기'));
+    d.appendChild(el('div', 'evidence', text || '(근거 없음)'));
+    return d;
+  }
+  function resultTable(items, firstHeader) {
+    var t = el('table');
+    var thead = el('thead'), hr = el('tr');
+    [firstHeader, '결과', ''].forEach(function (x) { hr.appendChild(el('th', null, x)); });
+    thead.appendChild(hr); t.appendChild(thead);
+    var tb = el('tbody');
+    items.forEach(function (it) {
+      var tr = el('tr');
+      tr.appendChild(el('td', null, it.title || it.criterion || ''));
+      var c2 = el('td'); c2.appendChild(badge(it.passed ? '통과' : '실패', it.passed ? 'yes' : 'no')); tr.appendChild(c2);
+      var c3 = el('td'); c3.appendChild(evidence(it.evidence)); tr.appendChild(c3);
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    return t;
+  }
+
+  function render(r) {
+    view.textContent = '';
+    var tri = r.triage || {};
+    var zone = ZONES[tri.zone] ? tri.zone : 'YELLOW';
+    var def = ZONES[zone];
+    document.title = '영역 판정 보고서 - ' + (r.createdAt || r.id || '');
+    document.getElementById('sub').textContent =
+      (r.loop ? '/' + r.loop + ' 의' : '루프의') + ' 결과를 Green · Yellow · Red 로 판정한 요약입니다. (' + (r.createdAt || r.id || '') + ')';
+
+    // 1. 영역 판정 (맨 위)
+    var zc = card(null, '영역 판정', 'zone ' + zone);
+    var head = el('div', 'zone-head');
+    head.appendChild(el('span', 'zone-dot ' + zone));
+    head.appendChild(el('span', 'zone-name ' + zone, def.name));
+    zc.appendChild(head);
+    zc.appendChild(el('p', 'zone-summary', tri.summary || ''));
+
+    label(zc, '이 영역의 기준');
+    zc.appendChild(list(def.meaning));
+
+    label(zc, '판정 이유');
+    zc.appendChild(list(arr(tri.reasons)));
+
+    if (arr(tri.signals).length) {
+      label(zc, '판단에 쓴 신호');
+      var st = el('table', 'signals');
+      var sh = el('thead'), shr = el('tr');
+      ['항목', '수준', '내용'].forEach(function (x) { shr.appendChild(el('th', null, x)); });
+      sh.appendChild(shr); st.appendChild(sh);
+      var sb = el('tbody');
+      tri.signals.forEach(function (s) {
+        var tr = el('tr');
+        tr.appendChild(el('td', null, s.label || ''));
+        var lv = LEVEL[s.level] ? s.level : 'YELLOW';
+        var c = el('td'); c.appendChild(badge(ZONES[lv].name, lv)); tr.appendChild(c);
+        tr.appendChild(el('td', null, s.note || ''));
+        sb.appendChild(tr);
+      });
+      st.appendChild(sb);
+      zc.appendChild(st);
+    }
+
+    label(zc, '해야 할 작업');
+    var todo = el('div', 'todo ' + zone);
+    todo.appendChild(list(def.todo.concat(arr(tri.actions))));
+    zc.appendChild(todo);
+    view.appendChild(zc);
+
+    // 2. 테스트 결과
+    var v = r.verify || {};
+    var tc = card(2, '테스트 결과');
+    if (arr(v.points).length) tc.appendChild(list(v.points));
+    if (arr(v.checklist).length) {
+      label(tc, '중요 체크리스트 3개');
+      tc.appendChild(resultTable(v.checklist, '항목'));
+    }
+    if (arr(v.criteria).length) {
+      label(tc, '수용 기준');
+      tc.appendChild(resultTable(v.criteria, '기준'));
+    }
+    if (arr(v.regression).length) {
+      label(tc, 'Regression Test (보유한 테스트 전체)');
+      var t = el('table');
+      var thead = el('thead'), hr = el('tr');
+      [['테스트', ''], ['전체', 'n'], ['통과', 'n'], ['실패', 'n'], ['건너뜀', 'n']].forEach(function (h) {
+        hr.appendChild(el('th', h[1], h[0]));
+      });
+      thead.appendChild(hr); t.appendChild(thead);
+      var tb = el('tbody');
+      v.regression.forEach(function (s) {
+        var tr = el('tr');
+        var c1 = el('td');
+        c1.appendChild(el('div', null, s.name || ''));
+        if (s.command) c1.appendChild(el('code', null, s.command));
+        tr.appendChild(c1);
+        [s.total, s.passed, s.failed, s.skipped].forEach(function (n) {
+          tr.appendChild(el('td', 'n', n === undefined || n === null ? '-' : String(n)));
+        });
+        tb.appendChild(tr);
+      });
+      t.appendChild(tb);
+      tc.appendChild(t);
+    }
+    if (arr(v.notRun).length) {
+      label(tc, '실행하지 못한 검증');
+      tc.appendChild(list(v.notRun));
+    }
+    if (arr(r.changedFiles).length) {
+      label(tc, '변경한 파일 (' + r.changedFiles.length + '개)');
+      var ul = el('ul');
+      r.changedFiles.forEach(function (f) { var li = el('li'); li.appendChild(el('code', null, f)); ul.appendChild(li); });
+      tc.appendChild(ul);
+    }
+    view.appendChild(tc);
+
+    // 3. 리팩토링 제안 (refactoring 단계가 report.refactoring 을 채웠을 때만 보인다. 코드는 수정하지 않은 제안이다)
+    var rf = r.refactoring;
+    var n = 3;
+    if (rf && (arr(rf.proposals).length || rf.summary)) {
+      n = 4;
+      var rc = card(3, '리팩토링 제안 (코드 수정 없음)');
+      if (rf.summary) rc.appendChild(el('p', null, rf.summary));
+      if (arr(rf.proposals).length) {
+        var pt = el('table');
+        var ph = el('thead'), phr = el('tr');
+        ['제안', '효과', '위험'].forEach(function (x) { phr.appendChild(el('th', null, x)); });
+        ph.appendChild(phr); pt.appendChild(ph);
+        var pb = el('tbody');
+        rf.proposals.forEach(function (p) {
+          var tr = el('tr');
+          var c1 = el('td');
+          c1.appendChild(el('div', null, p.title || ''));
+          if (p.target) c1.appendChild(el('code', null, p.target));
+          if (p.description) c1.appendChild(el('div', 'meta', p.description));
+          tr.appendChild(c1);
+          tr.appendChild(el('td', null, p.benefit || ''));
+          tr.appendChild(el('td', null, p.risk || ''));
+          pb.appendChild(tr);
+        });
+        pt.appendChild(pb);
+        rc.appendChild(pt);
+      }
+      if (arr(rf.checkedFiles).length) {
+        label(rc, '점검한 파일');
+        var cl = el('ul');
+        rf.checkedFiles.forEach(function (f) { var li = el('li'); li.appendChild(el('code', null, f)); cl.appendChild(li); });
+        rc.appendChild(cl);
+      }
+      view.appendChild(rc);
+    }
+
+    // 결론
+    var cc = card(n, '결론');
+    var line = el('div');
+    line.appendChild(badge(r.result || '?', r.result || ''));
+    var rounds = r.round ? ' · ' + r.round + '번째 라운드' : '';
+    line.appendChild(el('span', 'meta', '  ' + (r.createdAt || '') + rounds));
+    cc.appendChild(line);
+    cc.appendChild(el('p', 'headline', r.headline || ''));
+    label(cc, '요청');
+    cc.appendChild(el('div', 'req', r.request || ''));
+    if (arr(r.remainingIssues).length) {
+      label(cc, '남은 이슈');
+      cc.appendChild(list(r.remainingIssues));
+    }
+    if (r.nextStep) {
+      label(cc, '다음에 할 일');
+      cc.appendChild(el('div', null, r.nextStep));
+    }
+    var links = el('div', 'links meta');
+    if (r.precheckFile) links.appendChild(link(r.precheckFile, '점검 페이지'));
+    if (r.inspectionLog) links.appendChild(link(PREPARE_LOGS + r.inspectionLog, '점검 로그'));
+    if (v.logFile) links.appendChild(link(VERIFY_LOGS + v.logFile, '검증 로그'));
+    if (links.childNodes.length) { label(cc, '자세히'); cc.appendChild(links); }
+    view.appendChild(cc);
+  }
+
+  if (!report) {
+    view.appendChild(el('p', 'none', '보고서 데이터가 없습니다. 이 파일은 템플릿입니다.'));
+    return;
+  }
+  render(report);
+})();
+</script>
+</body>
+</html>
