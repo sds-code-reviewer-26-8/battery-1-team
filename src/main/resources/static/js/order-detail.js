@@ -10,10 +10,10 @@
 		if (error) flash.append(h('p', {class: 'alert error'}, error));
 	}
 
-	async function changeStatus(status, version) {
+	async function act(url, body) {
 		let message = null, error = null;
 		try {
-			const res = await postJson('/api/orders/' + id + '/status', {status, version});
+			const res = await postJson(url, body);
 			message = res.message;
 		} catch (e) {
 			error = e.message;
@@ -21,16 +21,8 @@
 		await load(message, error);
 	}
 
-	async function changeCustomer(customerName, version) {
-		let message = null, error = null;
-		try {
-			const res = await postJson('/api/orders/' + id + '/customer', {customerName, version});
-			message = res.message;
-		} catch (e) {
-			error = e.message;
-		}
-		await load(message, error);
-	}
+	const changeStatus = (status, version) => act('/api/orders/' + id + '/status', {status, version});
+	const changeCustomer = (customerName, version) => act('/api/orders/' + id + '/customer', {customerName, version});
 
 	function render(o) {
 		document.getElementById('orderId').textContent = '#' + o.id;
