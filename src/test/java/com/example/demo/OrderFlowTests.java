@@ -58,7 +58,57 @@ class OrderFlowTests {
 	}
 
 	@Test
-	void pagesRender() throws Exception {
+	void signedUpMemberCanLoginAndUseApis() throws Exception {
+		mvc.perform(get("/signup")).andExpect(status().isOk());
+		mvc.perform(post("/signup").param("username", "alice").param("password", "pw1234"))
+				.andExpect(status().isCreated());
+		mvc.perform(post("/signup").param("username", "alice").param("password", "pw1234"))
+				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").exists());
+		mvc.perform(post("/signup").param("username", " ").param("password", "pw1234"))
+				.andExpect(status().isBadRequest());
+		mvc.perform(post("/signup").param("username", "bob").param("password", "12"))
+				.andExpect(status().isBadRequest());
+		mvc.perform(post("/signup").param("username", "admin").param("password", "pw1234"))
+				.andExpect(status().isBadRequest());
+		mvc.perform(post("/login").param("username", "alice").param("password", "wrong"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.error").exists());
+		MockHttpSession s = new MockHttpSession();
+		mvc.perform(post("/login").param("username", "alice").param("password", "pw1234").session(s))
+				.andExpect(redirectedUrl("/orders"));
+		mvc.perform(post("/api/simulate").session(s).contentType(MediaType.APPLICATION_JSON)
+						.content("{\"orders\":" + ORDERS + "}"))
+				.andExpect(status().isOk());
+		mvc.perform(get("/master").session(s)).andExpect(status().isOk());
+	}
+
+	@Test
+	void usernameIsCaseInsensitiveAndPasswordHasMaxLength() throws Exception {
+		mvc.perform(post("/signup").param("username", "Carol").param("password", "pw1234"))
+				.andExpect(status().isCreated());
+		mvc.perform(post("/signup").param("username", "carol").param("password", "pw1234"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error").value("이미 사용 중인 아이디입니다"));
+		mvc.perform(post("/login").param("username", "CAROL").param("password", "pw1234"))
+				.andExpect(redirectedUrl("/orders"));
+		mvc.perform(post("/signup").param("username", "ADMIN").param("password", "pw1234"))
+				.andExpect(status().isBadRequest());
+		mvc.perform(post("/login").param("username", "Admin").param("password", "admin"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.error").exists());
+		mvc.perform(post("/login").param("username", "admin").param("password", "admin"))
+				.andExpect(redirectedUrl("/orders"));
+
+		mvc.perform(post("/signup").param("username", "dave").param("password", "p".repeat(64)))
+				.andExpect(status().isCreated());
+		mvc.perform(post("/signup").param("username", "erin").param("password", "p".repeat(65)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error").value("비밀번호는 64자 이하여야 합니다"));
+		mvc.perform(post("/signup").param("username", "erin").param("password", "abc"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error").value("비밀번호는 4자 이상이어야 합니다"));
+	}
+
+	@Test
+	void pagesRender()throws Exception {
 		MockHttpSession s = login();
 		for (String url : new String[] {"/orders", "/orders/new", "/master"}) {
 			mvc.perform(get(url).session(s)).andExpect(status().isOk());
