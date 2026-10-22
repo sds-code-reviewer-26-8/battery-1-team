@@ -207,6 +207,12 @@
 			showError(confirmError, '납기일은 5일 이상 50일 이하의 정수로 입력하세요.');
 			return;
 		}
+		const limit = dueLimit();
+		const plan = result.options.find(o => o.type === selected);
+		if (limit !== null && plan && plan.totalDays > limit
+				&& !window.confirm(`납기를 ${plan.totalDays - limit}일 초과합니다. 확정할까요?`)) {
+			return;
+		}
 		confirmBtn.disabled = true;
 		try {
 			const res = await postJson('/api/orders', {

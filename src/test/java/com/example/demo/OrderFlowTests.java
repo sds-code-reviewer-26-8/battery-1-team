@@ -220,6 +220,17 @@ class OrderFlowTests {
 	}
 
 	@Test
+	void dueDaysNonIntegerIsRejected() throws Exception {
+		MockHttpSession s = login();
+		long before = orderService.listOrders(null).size();
+		for (String due : new String[] {"7.5", "\"10\"", "1e1", "10.0", "true"}) {
+			confirmWith(s, ",\"dueDays\":" + due).andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.error").exists());
+		}
+		assertThat(orderService.listOrders(null)).hasSize((int) before);
+	}
+
+	@Test
 	void dueDaysDoesNotChangeServerCalculation() throws Exception {
 		MockHttpSession s = login();
 		MvcResult a = confirmWith(s, ",\"dueDays\":5").andExpect(status().isOk()).andReturn();

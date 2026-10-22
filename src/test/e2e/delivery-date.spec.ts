@@ -68,15 +68,55 @@ test.describe('주문 추가 — 납기일', () => {
     await expect(page.locator('.over-due')).toHaveCount(0);
   });
 
-  test('납기일을 넘는 경로도 주문 확정이 된다', async ({ page }) => {
+  test('납기일을 넘는 경로도 확인창을 수락하면 주문 확정이 된다', async ({ page }) => {
     await runSimulation(page);
     await page.getByLabel('가능한 빨리').check();
     await page.locator('#dueDays').fill('5');
     await expect(page.locator('#options .over-due').first()).toBeVisible();
+    const total = Number((await page.locator('#summary .stats b').nth(1).innerText()).replace(/\D/g, ''));
+    let message = '';
+    page.once('dialog', async (d) => {
+      message = d.message();
+      await d.accept();
+    });
     await page.getByRole('button', { name: '주문 확정' }).click();
     await expect(page).toHaveURL(/\/orders\/\d+$/);
+    expect(message).toBe(`납기를 ${total - 5}일 초과합니다. 확정할까요?`);
     await expect(page.locator('#meta')).toContainText('납기');
     await expect(page.locator('#meta')).toContainText('5일');
+  });
+
+  test('납기 초과 확인창을 취소하면 확정하지 않고 주문 추가 화면에 머문다', async ({ page }) => {
+    await runSimulation(page);
+    await page.getByLabel('가능한 빨리').check();
+    await page.locator('#dueDays').fill('5');
+    let asked = 0;
+    page.on('dialog', async (d) => {
+      asked++;
+      await d.dismiss();
+    });
+    await page.getByRole('button', { name: '주문 확정' }).click();
+    await expect.poll(() => asked).toBe(1);
+    await expect(page).toHaveURL(/\/orders\/new$/);
+    await expect(page.getByRole('button', { name: '주문 확정' })).toBeEnabled();
+  });
+
+  test('납기 이하이거나 납기가 없으면 확인창 없이 확정된다', async ({ page }) => {
+    let asked = 0;
+    page.on('dialog', async (d) => {
+      asked++;
+      await d.accept();
+    });
+    await runSimulation(page);
+    await page.getByLabel('가능한 빨리').check();
+    await page.locator('#dueDays').fill('50');
+    await page.getByRole('button', { name: '주문 확정' }).click();
+    await expect(page).toHaveURL(/\/orders\/\d+$/);
+    await page.goto('/orders/new');
+    await runSimulation(page);
+    await page.getByRole('button', { name: '주문 확정' }).click();
+    await expect(page).toHaveURL(/\/orders\/\d+$/);
+    expect(asked).toBe(0);
   });
 
   test('납기를 선택하지 않고 확정하면 상세와 목록의 납기는 -이다', async ({ page }) => {
@@ -115,6 +155,7 @@ const RED = 'rgb(209, 52, 47)';
 
 test.describe('납기 초과 주문 빨간 표시', () => {
   test.beforeEach(async ({ page }) => {
+    page.on('dialog', (d) => d.accept()); // 납기 초과 확정 확인창은 수락한다
     await login(page);
   });
 

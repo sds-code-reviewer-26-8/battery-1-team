@@ -29,7 +29,7 @@ import tools.jackson.databind.ObjectMapper;
 public class OrderController {
 
 	public record ConfirmRequest(Map<Country, Integer> orders, String routeType, long masterVersion, String memo,
-			Integer dueDays) {
+			JsonNode dueDays) {
 	}
 
 	public record StatusRequest(OrderStatus status, long version) {
@@ -126,9 +126,18 @@ public class OrderController {
 	@PostMapping("/api/orders")
 	@ResponseBody
 	public ResponseEntity<?> confirm(@RequestBody ConfirmRequest request, HttpSession session) {
+		JsonNode due = request.dueDays();
+		Integer dueDays = null;
+		if (due != null && !due.isNull()) {
+			// 납기는 정수만 받는다. 7.5 를 7 로, "10" 을 10 으로 바꿔 저장하지 않고 거부한다.
+			if (!due.isIntegralNumber() || !due.canConvertToInt()) {
+				return ResponseEntity.badRequest().body(Map.of("error", "납기일은 5일 이상 50일 이하의 정수로 입력하세요.", "conflict", false));
+			}
+			dueDays = due.intValue();
+		}
 		try {
 			Order order = service.confirm(request.orders(), request.routeType(), request.masterVersion(),
-					request.memo(), request.dueDays(), (String) session.getAttribute(LoginInterceptor.SESSION_USER));
+					request.memo(), dueDays, (String) session.getAttribute(LoginInterceptor.SESSION_USER));
 			return ResponseEntity.ok(Map.of("id", order.getId()));
 		} catch (BusinessException e) {
 			return ApiErrors.of(e);
