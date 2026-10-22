@@ -5,15 +5,17 @@ import com.example.demo.service.BusinessException;
 import com.example.demo.service.MasterService;
 import com.example.demo.simulation.Master;
 import java.math.BigDecimal;
+import java.net.URI;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class MasterController {
@@ -25,34 +27,40 @@ public class MasterController {
 	}
 
 	@GetMapping("/master")
-	public String master(Model model) {
-		if (!model.containsAttribute("form")) {
-			model.addAttribute("form", toForm(service.currentMaster()));
-		}
-		model.addAttribute("factories", Country.factories());
-		model.addAttribute("countries", Country.values());
-		return "master";
+	public String master() {
+		return "forward:/pages/master.html";
 	}
 
+	/** 마스터 화면(JS)이 폼 값으로 호출한다. 성공하면 /master 로 이동시키고, 잘못된 값이 있으면 이유를 JSON 으로 돌려준다. */
 	@PostMapping("/master")
-	public String saveMaster(@RequestParam Map<String, String> form, Model model, RedirectAttributes redirect) {
+	@ResponseBody
+	public ResponseEntity<?> saveMaster(@RequestParam Map<String, String> form) {
 		try {
 			service.updateMaster(form);
 		} catch (BusinessException e) {
-			model.addAttribute("errors", e.getMessages());
-			model.addAttribute("form", form);
-			model.addAttribute("factories", Country.factories());
-			model.addAttribute("countries", Country.values());
-			return "master";
+			return ResponseEntity.ok(Map.of("errors", e.getMessages()));
 		}
-		redirect.addFlashAttribute("message", "마스터 데이터를 저장했습니다");
-		return "redirect:/master";
+		return ResponseEntity.status(HttpStatus.FOUND).location(URI.create("/master")).build();
 	}
 
 	@GetMapping("/api/master")
 	@ResponseBody
 	public Master masterJson() {
 		return service.currentMaster();
+	}
+
+	/** 화면 입력칸 구성: 공장·나라 목록과 입력칸 이름 → 값 */
+	@GetMapping("/api/master/form")
+	@ResponseBody
+	public Map<String, Object> masterForm() {
+		return Map.of(
+				"form", toForm(service.currentMaster()),
+				"factories", Country.factories().stream().map(MasterController::option).toList(),
+				"countries", Arrays.stream(Country.values()).map(MasterController::option).toList());
+	}
+
+	private static Map<String, String> option(Country c) {
+		return Map.of("name", c.name(), "label", c.getLabel());
 	}
 
 	/** 화면 입력칸 이름 → 값 */

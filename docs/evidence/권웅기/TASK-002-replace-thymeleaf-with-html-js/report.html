@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TASK-002 · Thymeleaf 제거, HTML/JS 전환 — 구현 후 보고</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#1b2333;--muted:#667189;--line:#e2e7f1;--accent:#2f5bea;
+--ok:#0f7a58;--ok-bg:#e1f5ec;--warn:#9a5208;--warn-bg:#fdefd8;--bad:#b3212f;--bad-bg:#fde7ea;--info-bg:#e9efff;
+--shadow:0 1px 2px rgba(20,30,60,.06),0 10px 28px rgba(20,30,60,.07)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "맑은 고딕","Segoe UI",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:32px 20px 72px}
+.hero{border-radius:22px;padding:30px 32px;box-shadow:var(--shadow);color:#fff;background:linear-gradient(135deg,#0c4a3a 0%,#0f7a58 60%,#34b58a 100%)}
+.hero .meta{font-size:13px;opacity:.88}
+.hero h1{margin:8px 0 16px;font-size:27px;line-height:1.3;font-weight:800}
+.hero .verdict{margin:14px 0 0}
+.badge{display:inline-flex;align-items:center;gap:7px;font-weight:800;font-size:13px;padding:6px 14px;border-radius:999px;background:#fff;color:#0f7a58}
+.chip.type{background:rgba(255,255,255,.2);color:#fff;margin-left:8px;font-size:12px;padding:5px 12px}
+.badge .dot{width:9px;height:9px;border-radius:50%;background:currentColor}
+h2{margin:34px 0 14px;font-size:18px;display:flex;align-items:center;gap:10px}
+h2 .no{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:800}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow)}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.stack{display:grid;gap:14px}
+.lbl{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted);margin:18px 0 6px}
+.src{font-size:13px;color:var(--muted)}
+.card ul{margin:4px 0;padding-left:20px}
+.chip{display:inline-block;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.chip.pass{background:var(--ok-bg);color:var(--ok)}.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.skip{background:var(--line);color:var(--muted)}
+.zone{border-width:2px}
+.zone.RED{border-color:var(--bad)}.zone.YELLOW{border-color:var(--warn)}
+.zone-head{display:flex;align-items:center;gap:12px}
+.zone-dot{width:22px;height:22px;border-radius:50%}
+.zone-dot.YELLOW{background:var(--warn)}
+.zone-name{font-size:22px;font-weight:800}.zone-name.YELLOW{color:var(--warn)}
+.zone-summary{font-size:17px;font-weight:700;margin:10px 0 0}
+.todo{border-radius:10px;padding:10px 14px}.todo.YELLOW{background:var(--warn-bg)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.step{position:relative;padding-top:22px}
+.step .tag{position:absolute;top:-12px;left:18px;font-size:12px;font-weight:800;color:#fff;background:var(--accent);padding:3px 12px;border-radius:999px}
+.check{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:start}
+.check .n{width:44px;height:44px;border-radius:14px;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:20px;font-weight:800}
+.check h3{margin:0 0 4px;font-size:16px}.check p{margin:2px 0;color:var(--muted);font-size:14px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:6px 0 14px}
+.tile{text-align:center;padding:14px 10px;border:1px solid var(--line);border-radius:12px}
+.tile b{display:block;font-size:28px;line-height:1.1}.tile span{font-size:12px;color:var(--muted);font-weight:700}
+.tile.okt b{color:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;color:var(--muted);padding:10px 12px;border-bottom:2px solid var(--line)}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right}
+.quote{border-left:4px solid var(--accent);background:var(--info-bg);padding:14px 18px;border-radius:0 12px 12px 0;white-space:pre-wrap}
+.headline{font-size:19px;font-weight:800;margin:10px 0 0}
+.links a{color:var(--accent)}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 18px;margin-top:12px}
+summary{cursor:pointer;font-weight:700}
+pre{margin:10px 0 0;padding:12px 14px;border-radius:10px;background:var(--info-bg);overflow:auto;font:13px/1.5 Consolas,monospace}
+code{font-family:Consolas,monospace;font-size:13px;background:var(--info-bg);padding:1px 6px;border-radius:6px}
+footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="meta">TASK-002 · 권웅기 · 2026-10-22 11:50 · 시도 1/3</div>
+    <h1>Thymeleaf 제거, HTML/JavaScript 기반 프론트엔드로 전환</h1>
+    <span class="badge"><span class="dot"></span>PASS · 모든 점검 통과, 루프 종료</span><span class="chip type">리팩터링</span>
+    <p class="verdict">JUnit 22/22, E2E 45/45(STS-05 예상 실패 유지)가 baseline 과 같게 통과했고 Thymeleaf 잔존 0건, 테스트 파일 변경 없음.</p>
+  </header>
+
+  <h2><span class="no">1</span>영역 판정</h2>
+  <section class="card zone YELLOW">
+    <div class="zone-head"><span class="zone-dot YELLOW"></span><span class="zone-name YELLOW">Yellow</span></div>
+    <p class="zone-summary">변경 규모가 크고 로그인 인터셉터 경로가 바뀌었으나, 기존 JUnit·E2E 가 동작 불변을 확인해 주었습니다.</p>
+    <div class="lbl">판정 이유</div>
+    <ul><li>컨트롤러 3개, 설정, 정적 페이지·JS 다수를 바꾼 큰 변경</li><li>로그인 보호(WebConfig)가 바뀜. 단 기존 auth 테스트가 보호 동작을 단언</li><li>POST /login, /master 가 실패 시 200 JSON 으로 내려가는 응답 방식 차이가 있음</li><li>새 JSON API 와 XSS 방지(textContent)를 직접 단언하는 신규 테스트는 없음</li></ul>
+    <div class="lbl">판단에 쓴 신호</div>
+    <table>
+      <thead><tr><th>항목</th><th>수준</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>변경 규모</td><td><span class="chip warn">Yellow</span></td><td>추적 파일 약 193 추가 / 58 삭제 + 신규 HTML·JS</td></tr>
+        <tr><td>민감 영역</td><td><span class="chip warn">Yellow</span></td><td>로그인 인터셉터 제외 경로 추가 (/pages/login.html)</td></tr>
+        <tr><td>회귀 테스트</td><td><span class="chip pass">Green</span></td><td>JUnit 22/22, E2E 45/45</td></tr>
+        <tr><td>저장소 상태</td><td><span class="chip warn">Yellow</span></td><td>기능 브랜치, 변경 미커밋</td></tr>
+      </tbody>
+    </table>
+    <div class="lbl">해야 할 작업</div>
+    <div class="todo YELLOW"><ul><li>Evidence 를 더 꼼꼼히 살펴보고 Diff 요약을 리뷰한다</li><li>JSON API 와 로그인 실패 응답(200)에 대한 테스트 보강을 검토한다</li></ul></div>
+  </section>
+
+  <h2><span class="no">2</span>한눈에 보는 요약</h2>
+  <div class="steps">
+    <section class="card step"><span class="tag">Precheck</span><ul><li>컨트롤러·템플릿·테스트를 읽고 baseline 67/67 확보</li><li>체크리스트 3개 설정</li></ul></section>
+    <section class="card step"><span class="tag">Implement</span><ul><li>템플릿 6개와 의존성 제거, static/pages HTML 과 JS 추가</li><li>컨트롤러를 forward 와 JSON API 로 교체</li></ul></section>
+    <section class="card step"><span class="tag">Report</span><ul><li>JUnit·E2E 직접 재실행, 모두 통과</li><li>테스트 파일 무변경 확인</li></ul></section>
+  </div>
+
+  <h2><span class="no">3</span>테스트 결과</h2>
+  <section class="card">
+    <ul><li>체크리스트 3/3 통과</li><li>JUnit 22 + E2E 45 = 67 모두 통과 (baseline 과 동일)</li></ul>
+
+    <div class="lbl">중요 체크리스트 3개</div>
+    <div class="stack">
+      <div class="check"><div class="n">1</div><div><h3>baseline 과 같은 테스트 결과</h3><p>확인: gradlew test --rerun-tasks, npm test, git diff main -- src/test</p><p>근거: JUnit 1+9+12=22 실패 0. Playwright 45 passed, STS-05 는 x(예상 실패)로 유지. src/test diff 출력 없음</p></div><span class="chip pass">통과</span></div>
+      <div class="check"><div class="n">2</div><div><h3>Thymeleaf 제거와 화면이 HTML/JS 로 열림</h3><p>확인: grep -rnE 단어경계 th: 과 thymeleaf 를 src/main, build.gradle.kts 에서 검색, templates 폴더 확인</p><p>근거: 0건, templates 폴더 없음(resources 에는 application.properties, static 만). 목록·상세·신규·마스터 화면은 E2E journey/master/order-status 가 렌더링을 단언해 통과</p></div><span class="chip pass">통과</span></div>
+      <div class="check"><div class="n">3</div><div><h3>외부 동작 불변: 로그인 보호와 목록 화면</h3><p>확인: npm test 의 auth.spec.ts, orders-list.spec.ts (8091 격리 서버)</p><p>근거: LIST-01-TC02 칩 5개와 건수, TC03 표 열, LIST-04-TC02 칩 건수 합 = 전체 통과. auth 스펙 통과</p></div><span class="chip pass">통과</span></div>
+    </div>
+
+    <div class="lbl">수용 기준</div>
+    <table>
+      <thead><tr><th>기준</th><th>결과</th><th>근거</th></tr></thead>
+      <tbody>
+        <tr><td>Thymeleaf 제거, HTML/JS 로 전환 (목적)</td><td><span class="chip pass">통과</span></td><td>th:/thymeleaf 0건, templates 삭제, static/pages 로 화면 제공, E2E 전부 통과</td></tr>
+        <tr><td>외부 동작 유지 (범위)</td><td><span class="chip pass">통과</span></td><td>URL·선택자·문구 의존 E2E 45건과 JUnit 22건이 수정 없이 통과</td></tr>
+        <tr><td>요청 외 변경 없음 (범위)</td><td><span class="chip pass">통과</span></td><td>STS-05 결함 미수정, DB 스키마 무변경, 테스트 무변경</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">유형별 확인 (리팩터링)</div>
+    <table>
+      <thead><tr><th>확인 항목</th><th>결과</th><th>근거</th></tr></thead>
+      <tbody>
+        <tr><td>외부 동작 불변</td><td><span class="chip pass">통과</span></td><td>로그인·목록·상세·상태변경·마스터 흐름을 E2E 가 격리 서버에서 그대로 통과</td></tr>
+        <tr><td>기존 테스트 미변경</td><td><span class="chip pass">통과</span></td><td>git diff main --stat -- src/test 출력 없음</td></tr>
+        <tr><td>baseline 과 동일 결과</td><td><span class="chip pass">통과</span></td><td>67/67 → 67/67</td></tr>
+        <tr><td>동작 변경·기능 추가 없음</td><td><span class="chip pass">통과</span></td><td>추가된 것은 화면 구성용 내부 JSON 주소(/api/...)뿐이며 사용자 화면·문구·URL 은 동일. 로그인 실패 응답이 200 JSON 이 된 점은 남은 이슈로 기록</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">Regression Test (보유한 테스트 전체)</div>
+    <div class="tiles">
+      <div class="tile"><b>67</b><span>전체</span></div>
+      <div class="tile okt"><b>67</b><span>통과</span></div>
+      <div class="tile"><b>0</b><span>실패</span></div>
+      <div class="tile"><b>0</b><span>건너뜀</span></div>
+    </div>
+    <table>
+      <thead><tr><th>테스트</th><th>실행 명령</th><th class="n">baseline</th><th class="n">전체</th><th class="n">통과</th><th class="n">실패</th><th class="n">건너뜀</th></tr></thead>
+      <tbody>
+        <tr><td>JUnit</td><td><code>./gradlew.bat test --rerun-tasks</code></td><td class="n">22</td><td class="n">22</td><td class="n">22</td><td class="n">0</td><td class="n">0</td></tr>
+        <tr><td>E2E (Playwright)</td><td><code>npm test</code></td><td class="n">45</td><td class="n">45</td><td class="n">45</td><td class="n">0</td><td class="n">0</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">실행하지 못한 검증</div>
+    <ul><li>없음</li></ul>
+
+    <div class="lbl">정적 점검</div>
+    <table>
+      <thead><tr><th>점검</th><th>실행 명령</th><th>결과</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>컴파일 경고</td><td><code>./gradlew.bat compileJava compileTestJava --warning-mode all</code></td><td><span class="chip pass">통과</span></td><td>javac 경고 0건 (git 의 LF/CRLF 안내만 출력)</td></tr>
+        <tr><td>린트 · 포매터</td><td>—</td><td><span class="chip skip">미설정</span></td><td>저장소에 설정 없음</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">테스트 커버리지</div>
+    <div class="top"><span>화면 동작(로그인 보호, 목록, 상태 변경, 마스터, 신규 주문)을 기존 E2E 와 JUnit 이 직접 단언합니다.</span><span class="chip pass">기존 테스트</span></div>
+    <p class="src">auth.spec.ts, orders-list.spec.ts, order-status.spec.ts, master.spec.ts, journey*.spec.ts, OrderFlowTests. 새 JSON API 의 직접 단언 테스트는 없음(리팩터링이므로 추가하지 않음).</p>
+
+    <div class="lbl">변경한 파일</div>
+    <ul><li>컨트롤러 3개(Auth, Order, Master), LoginUserAdvice 삭제, WebConfig</li><li>build.gradle.kts, application.properties</li><li>templates 6개 삭제</li><li>static/pages 5개, static/js(login, orders, order-detail, master 추가, common 수정)</li></ul>
+  </section>
+
+  <h2><span class="no">4</span>결론</h2>
+  <section class="card">
+    <div><span class="chip pass">PASS</span> <span class="src">&nbsp;2026-10-22 11:50 · 1번째 라운드</span></div>
+    <p class="headline">Thymeleaf 가 제거되고 정적 HTML/JS 로 전환되었으며 기존 동작이 유지되었습니다.</p>
+    <div class="lbl">요청</div>
+    <div class="quote">feature/frontend-refactoring-practice 브랜치에서 Thymeleaf 로 만들어진 프론트엔드를 제거하고 HTML, JavaScript 기반으로 변경한다.</div>
+    <div class="lbl">남은 이슈</div>
+    <ul><li>POST /login, /master 의 실패가 200 JSON 으로 내려감(JUnit 호환을 위한 선택)</li><li>PRD.md, INTENT.md 는 읽지 않음</li><li>STS-05 취소 삭제 결함은 의도적으로 유지</li></ul>
+    <div class="lbl">다음에 할 일</div>
+    <div>변경을 검토한 뒤 커밋·PR 여부를 정하세요.</div>
+    <div class="lbl">자세히</div>
+    <div class="links"><a href="precheck.html">점검 페이지</a></div>
+  </section>
+
+  <details>
+    <summary>확인한 근거 (실행 출력 발췌)</summary>
+    <pre>gradlew test --rerun-tasks: BUILD SUCCESSFUL
+JUnit tests=1/9/12 skipped=0 failures=0 errors=0
+npm test: 45 passed (35.5s), STS-05 expected fail
+grep th:|thymeleaf (word boundary) src/main build.gradle.kts: 0
+git diff main --stat -- src/test: (empty)
+netstat 8091 LISTEN: 0</pre>
+  </details>
+
+  <footer>report · TASK-002 · 구현 후 보고 증거</footer>
+</div>
+</body>
+</html>
