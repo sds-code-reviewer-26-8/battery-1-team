@@ -70,7 +70,12 @@ function renderHeader(active) {
 	const logoutForm = h('form', {method: 'post', action: '/logout'}, logoutBtn);
 	logoutForm.addEventListener('submit', async e => {
 		e.preventDefault();
-		await fetch('/logout', {method: 'POST'});
+		try {
+			await fetch('/logout', {method: 'POST'});
+		} catch (x) {
+			alert('로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요');
+			return;
+		}
 		location.href = '/login';
 	});
 	const header = h('header', {class: 'topbar'},

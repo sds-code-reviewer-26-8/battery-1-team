@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 @Controller
@@ -101,6 +102,8 @@ public class OrderController {
 					json.readTree(o.getPlanJson()), history));
 		} catch (BusinessException e) {
 			return ApiErrors.of(e);
+		} catch (JacksonException e) {
+			return ApiErrors.serverError("저장된 계획 데이터를 읽을 수 없습니다");
 		}
 	}
 

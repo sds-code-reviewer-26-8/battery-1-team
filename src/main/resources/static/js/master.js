@@ -48,7 +48,13 @@
 
 	root.addEventListener('submit', async e => {
 		e.preventDefault();
-		const res = await fetch('/master', {method: 'POST', body: new URLSearchParams(new FormData(root))});
+		let res;
+		try {
+			res = await fetch('/master', {method: 'POST', body: new URLSearchParams(new FormData(root))});
+		} catch (x) {
+			flash.replaceChildren(h('p', {class: 'alert error'}, '서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요'));
+			return;
+		}
 		if (res.status === 401) {
 			location.href = '/login';
 			return;

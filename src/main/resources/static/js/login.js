@@ -1,7 +1,14 @@
 document.getElementById('loginForm').addEventListener('submit', async e => {
 	e.preventDefault();
 	const err = document.getElementById('loginError');
-	const res = await fetch('/login', {method: 'POST', body: new URLSearchParams(new FormData(e.target))});
+	let res;
+	try {
+		res = await fetch('/login', {method: 'POST', body: new URLSearchParams(new FormData(e.target))});
+	} catch (x) {
+		err.textContent = '서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요';
+		err.hidden = false;
+		return;
+	}
 	if (res.redirected) {
 		location.href = '/orders';
 		return;
