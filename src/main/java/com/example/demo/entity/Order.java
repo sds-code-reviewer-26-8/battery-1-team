@@ -53,6 +53,9 @@ public class Order {
 	@Column(nullable = false)
 	private String planJson;
 
+	/** 담당자가 고른 납기일(일). 선택하지 않았으면 NULL */
+	private Integer dueDays;
+
 	@Version
 	private long version;
 
@@ -60,7 +63,8 @@ public class Order {
 	}
 
 	public Order(LocalDateTime confirmedAt, String createdBy, int totalK, String routeType, String routeLabel,
-			int totalDays, long productionCost, long shippingCost, long totalCost, String memo, String planJson) {
+			int totalDays, long productionCost, long shippingCost, long totalCost, String memo, String planJson,
+			Integer dueDays) {
 		this.confirmedAt = confirmedAt;
 		this.createdBy = createdBy;
 		this.totalK = totalK;
@@ -72,6 +76,7 @@ public class Order {
 		this.totalCost = totalCost;
 		this.memo = memo;
 		this.planJson = planJson;
+		this.dueDays = dueDays;
 		this.status = OrderStatus.CONFIRMED;
 	}
 
@@ -129,6 +134,10 @@ public class Order {
 
 	public String getPlanJson() {
 		return planJson;
+	}
+
+	public Integer getDueDays() {
+		return dueDays;
 	}
 
 	public long getVersion() {

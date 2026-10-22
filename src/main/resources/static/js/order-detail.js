@@ -29,7 +29,7 @@
 		const meta = (label, value) => h('div', null, h('dt', null, label), h('dd', null, value));
 		document.getElementById('meta').replaceChildren(
 			meta('확정 일시', o.confirmedAt), meta('작성자', o.createdBy), meta('경로', o.routeLabel),
-			meta('메모', o.memo != null ? o.memo : '-'));
+			meta('납기', o.dueDays != null ? o.dueDays + '일' : '-'), meta('메모', o.memo != null ? o.memo : '-'));
 
 		const actions = document.getElementById('actions');
 		actions.replaceChildren();

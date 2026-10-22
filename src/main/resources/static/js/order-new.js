@@ -95,7 +95,7 @@
 		inputError.hidden = true;
 	}
 
-	// ---- 납기일 (화면에서만 쓰며 저장하지 않는다)
+	// ---- 납기일 (초과 표시에 쓰고, 선택했으면 확정 시 함께 저장한다)
 
 	/** 적용할 납기일(일). 체크가 꺼져 있거나 5~50 범위를 벗어나면 null */
 	function dueLimit() {
@@ -202,13 +202,18 @@
 	confirmBtn.addEventListener('click', async () => {
 		if (!result) return;
 		confirmError.hidden = true;
+		if (asap.checked && dueLimit() === null) {
+			showError(confirmError, '납기일은 5일 이상 50일 이하의 정수로 입력하세요.');
+			return;
+		}
 		confirmBtn.disabled = true;
 		try {
 			const res = await postJson('/api/orders', {
 				orders: values,
 				routeType: selected,
 				masterVersion: result.master.version,
-				memo: document.getElementById('memo').value
+				memo: document.getElementById('memo').value,
+					dueDays: dueLimit()
 			});
 			location.href = '/orders/' + res.id;
 		} catch (e) {

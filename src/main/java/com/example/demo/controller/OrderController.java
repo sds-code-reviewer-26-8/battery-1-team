@@ -28,7 +28,8 @@ import tools.jackson.databind.ObjectMapper;
 @Controller
 public class OrderController {
 
-	public record ConfirmRequest(Map<Country, Integer> orders, String routeType, long masterVersion, String memo) {
+	public record ConfirmRequest(Map<Country, Integer> orders, String routeType, long masterVersion, String memo,
+			Integer dueDays) {
 	}
 
 	public record StatusRequest(OrderStatus status, long version) {
@@ -41,7 +42,8 @@ public class OrderController {
 	}
 
 	public record OrderRow(Long id, String confirmedAt, int totalK, String routeLabel, int totalDays,
-			String totalCostEok, String status, String statusLabel, String createdBy) {
+			String totalCostEok, String status, String statusLabel, String createdBy,
+			Integer dueDays) {
 	}
 
 	public record OrderList(List<OrderRow> orders, Map<OrderStatus, Long> counts, int total,
@@ -52,7 +54,8 @@ public class OrderController {
 	}
 
 	public record OrderDetail(Long id, String status, String statusLabel, List<StatusOption> next,
-			String confirmedAt, String createdBy, String routeLabel, String memo, long version, JsonNode plan,
+			String confirmedAt, String createdBy, String routeLabel, String memo, Integer dueDays, long version,
+			JsonNode plan,
 			List<HistoryRow> history) {
 	}
 
@@ -98,7 +101,7 @@ public class OrderController {
 			List<HistoryRow> history = service.history(id).stream().map(OrderController::toHistoryRow).toList();
 			return ResponseEntity.ok(new OrderDetail(o.getId(), o.getStatus().name(), o.getStatus().getLabel(),
 					o.getStatus().next().stream().map(StatusOption::of).toList(), format(o.getConfirmedAt(), MINUTE),
-					o.getCreatedBy(), o.getRouteLabel(), o.getMemo(), o.getVersion(),
+					o.getCreatedBy(), o.getRouteLabel(), o.getMemo(), o.getDueDays(), o.getVersion(),
 					json.readTree(o.getPlanJson()), history));
 		} catch (BusinessException e) {
 			return ApiErrors.of(e);
@@ -125,7 +128,7 @@ public class OrderController {
 	public ResponseEntity<?> confirm(@RequestBody ConfirmRequest request, HttpSession session) {
 		try {
 			Order order = service.confirm(request.orders(), request.routeType(), request.masterVersion(),
-					request.memo(), (String) session.getAttribute(LoginInterceptor.SESSION_USER));
+					request.memo(), request.dueDays(), (String) session.getAttribute(LoginInterceptor.SESSION_USER));
 			return ResponseEntity.ok(Map.of("id", order.getId()));
 		} catch (BusinessException e) {
 			return ApiErrors.of(e);
@@ -135,7 +138,7 @@ public class OrderController {
 	private static OrderRow toRow(Order o) {
 		return new OrderRow(o.getId(), format(o.getConfirmedAt(), MINUTE), o.getTotalK(), o.getRouteLabel(),
 				o.getTotalDays(), o.getTotalCostEok(), o.getStatus().name(), o.getStatus().getLabel(),
-				o.getCreatedBy());
+				o.getCreatedBy(), o.getDueDays());
 	}
 
 	private static HistoryRow toHistoryRow(OrderStatusHistory h) {

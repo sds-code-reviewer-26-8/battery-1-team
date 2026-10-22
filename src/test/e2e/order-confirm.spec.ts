@@ -54,8 +54,8 @@ test('CFM-05 확정 후 목록 반영', async ({ page }) => {
   const cells = await listRowCells(page, id);
   expect(cells[2]).toBe('12,000'); // 총 수량(K)
   expect(cells[3]).toBe('운항비 최소'); // 경로
-  expect(cells[6]).toBe('확정'); // 상태
-  expect(cells[7]).toBe('admin'); // 작성자
+  expect(cells[7]).toBe('확정'); // 상태
+  expect(cells[8]).toBe('admin'); // 작성자
 
   // '확정' 칩과 '전체' 칩 건수가 1씩 늘었다
   expect(await chipCount(page, '확정')).toBe(before.confirmed + 1);

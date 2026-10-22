@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { login } from './order-helpers';
 
-/** 주문 추가 화면의 '가능한 빨리' 납기일(5~50일) 표시 E2E. 납기일은 저장하지 않는다. */
+/** 주문 추가 화면의 '가능한 빨리' 납기일(5~50일) 표시 E2E. 확정하면 납기일이 주문에 저장된다. */
 
 async function runSimulation(page: Page) {
   await page.getByRole('button', { name: '시뮬레이션 실행' }).click();
@@ -75,5 +75,26 @@ test.describe('주문 추가 — 납기일', () => {
     await expect(page.locator('#options .over-due').first()).toBeVisible();
     await page.getByRole('button', { name: '주문 확정' }).click();
     await expect(page).toHaveURL(/\/orders\/\d+$/);
+    await expect(page.locator('#meta')).toContainText('납기');
+    await expect(page.locator('#meta')).toContainText('5일');
+  });
+
+  test('납기를 선택하지 않고 확정하면 상세와 목록의 납기는 -이다', async ({ page }) => {
+    await runSimulation(page);
+    await page.getByRole('button', { name: '주문 확정' }).click();
+    await expect(page).toHaveURL(/\/orders\/\d+$/);
+    await expect(page.locator('#meta div', { hasText: '납기' })).toContainText('-');
+    await page.goto('/orders');
+    await expect(page.locator('th', { hasText: '납기' })).toBeVisible();
+    await expect(page.locator('#rows tr').first().locator('td').nth(5)).toHaveText('-');
+  });
+
+  test('납기를 체크하고 범위 밖 값이면 확정하지 않는다', async ({ page }) => {
+    await runSimulation(page);
+    await page.getByLabel('가능한 빨리').check();
+    await page.locator('#dueDays').fill('4');
+    await page.getByRole('button', { name: '주문 확정' }).click();
+    await expect(page.locator('#confirmError')).toBeVisible();
+    await expect(page).toHaveURL(/\/orders\/new$/);
   });
 });
