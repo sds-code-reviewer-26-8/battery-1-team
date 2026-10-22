@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TASK-003 · 주문 취소 이력 보존과 목록 이동 — 구현 후 보고</title>
+<title>TASK-003 · 주문 취소 이력 보존 — 구현 후 보고 (2회차)</title>
 <style>
 :root{--bg:#f4f6fb;--card:#fff;--ink:#1b2333;--muted:#667189;--line:#e2e7f1;--accent:#2f5bea;
 --ok:#0f7a58;--ok-bg:#e1f5ec;--warn:#9a5208;--warn-bg:#fdefd8;--bad:#b3212f;--bad-bg:#fde7ea;--info-bg:#e9efff;
 --shadow:0 1px 2px rgba(20,30,60,.06),0 10px 28px rgba(20,30,60,.07)}
+@media (prefers-color-scheme:dark){:root{--bg:#0e131f;--card:#161d2d;--ink:#e7ebf4;--muted:#93a0ba;--line:#26304a;--accent:#8aa8ff;
+--ok:#63d6a9;--ok-bg:#12342b;--warn:#f1b660;--warn-bg:#3a2b13;--bad:#ff8c9a;--bad-bg:#3e1b22;--info-bg:#1c2745;--shadow:none}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "맑은 고딕","Segoe UI",system-ui,sans-serif}
 .wrap{max-width:980px;margin:0 auto;padding:32px 20px 72px}
@@ -64,26 +66,25 @@ footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
 <div class="wrap">
 
   <header class="hero">
-    <div class="meta">TASK-003 · 권웅기 · 2026-10-22 13:33 · 시도 1/3</div>
-    <h1>주문 취소 이력 보존과 목록 이동</h1>
+    <div class="meta">TASK-003 · 권웅기 · 2026-10-22 14:08 · 시도 2회차 (재진입)</div>
+    <h1>주문 취소 이력 보존 — 취소 후 상세 화면 유지</h1>
     <span class="badge"><span class="dot"></span>PASS · 모든 점검 통과, 루프 종료</span><span class="chip type">기능 추가</span>
-    <p class="verdict">취소해도 주문과 이력이 남고 취소 후 목록으로 이동함을 STS-05 와 JUnit 으로 직접 확인했고, JUnit 23건 E2E 45건이 모두 통과했습니다.</p>
+    <p class="verdict">팀원 리뷰 반영 후에도 취소는 주문과 이력을 남기고 상세 화면에 머뭅니다. 체크리스트 3/3, JUnit 25건과 E2E 45건이 모두 통과했습니다.</p>
   </header>
 
   <h2><span class="no">1</span>영역 판정</h2>
   <section class="card zone YELLOW">
     <div class="zone-head"><span class="zone-dot"></span><span class="zone-name">Yellow</span></div>
-    <p class="zone-summary">취소 정책(삭제에서 보존)이라는 업무 규칙 변경이라 꼼꼼한 검토가 필요합니다.</p>
+    <p class="zone-summary">취소 정책(삭제에서 보존)이라는 업무 규칙 변경이라 꼼꼼한 검토가 필요하지만, 직접 단언하는 테스트가 충분합니다.</p>
     <div class="lbl">판정 이유</div>
-    <ul><li>주문 취소 시 데이터 처리 정책이 바뀜 (INTENT.md 28, 41행은 아직 옛 서술)</li><li>공용이 아닌 작업 브랜치 fix/order-cancel, 변경 규모는 작음 (4파일)</li></ul>
+    <ul><li>주문 취소 시 데이터 처리 정책이 바뀜 (docs/INTENT.md 28, 41행은 아직 옛 서술)</li><li>작업 브랜치 fix/order-cancel, 변경 규모는 작음 (프로덕션 1파일 3줄 삭제, 테스트 2파일)</li></ul>
     <div class="lbl">판단에 쓴 신호</div>
     <table>
       <thead><tr><th>항목</th><th>수준</th><th>내용</th></tr></thead>
       <tbody>
-        <tr><td>변경 규모</td><td><span class="chip pass">Green</span></td><td>프로덕션 2파일, 테스트 2파일</td></tr>
-        <tr><td>테스트 커버리지</td><td><span class="chip pass">Green</span></td><td>STS-05 와 cancelKeepsOrderAndHistory 가 직접 단언</td></tr>
-        <tr><td>업무 규칙</td><td><span class="chip warn">Yellow</span></td><td>취소 후 데이터 보존 정책, 문서와 불일치</td></tr>
-        
+        <tr><td>변경 규모</td><td><span class="chip pass">Green</span></td><td>main 대비 3파일, 51줄 추가 / 8줄 삭제</td></tr>
+        <tr><td>테스트 커버리지</td><td><span class="chip pass">Green</span></td><td>STS-05, JUnit 3건(취소 보존, 진행 중 취소, 취소 후 변경 거부)이 직접 단언</td></tr>
+        <tr><td>업무 규칙</td><td><span class="chip warn">Yellow</span></td><td>취소 후 데이터 보존 정책, INTENT.md 와 불일치</td></tr>
       </tbody>
     </table>
     <div class="lbl">해야 할 작업</div>
@@ -95,33 +96,32 @@ footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
     <section class="card step"><span class="tag">Precheck</span>
       <ul><li>취소 시 삭제 위치와 STS-05 test.fail 확인</li><li>체크리스트 3개와 baseline 67/67 설정</li></ul></section>
     <section class="card step"><span class="tag">Implement</span>
-      <ul><li>취소 시 orders.delete 제거, 취소 성공 시 /orders 이동</li><li>STS-05 정상화, JUnit 1건 추가</li></ul></section>
+      <ul><li>취소 시 orders.delete 제거 (주석 코드와 미사용 변수 정리)</li><li>팀원 리뷰 반영: 목록 이동 대신 상세 유지, STS-05 단언 변경, JUnit 3건</li></ul></section>
     <section class="card step"><span class="tag">Report</span>
-      <ul><li>체크리스트 3/3, 회귀 68/68 직접 실행</li><li>추가 테스트는 implement 가 작성한 것을 확인</li></ul></section>
+      <ul><li>체크리스트 3/3, 회귀 70/70 직접 실행</li><li>JUnit --rerun-tasks, npm test 재실행, 8091 프로세스 잔존 없음</li></ul></section>
   </div>
 
   <h2><span class="no">3</span>테스트 결과</h2>
   <section class="card">
-    <ul><li>체크리스트 3/3 통과</li><li>JUnit 23 + E2E 45 모두 통과 (baseline 67 에서 신규 1건 증가)</li></ul>
+    <ul><li>체크리스트 3/3 통과</li><li>JUnit 25 + E2E 45 모두 통과 (baseline 67 에서 신규 JUnit 3건 증가)</li></ul>
 
     <div class="lbl">중요 체크리스트 3개</div>
     <div class="stack">
       <div class="check"><div class="n">1</div><div>
-        <h3>취소해도 주문이 남고 목록으로 이동한다</h3><p>확인: npm test 전체 실행 (STS-05 의 test.fail 제거본)</p><p>근거: STS-05 ok. 취소 후 URL /orders, 취소 칩 +1, 전체 칩 불변 단언 통과</p></div><span class="chip pass">통과</span></div>
+        <h3>취소해도 주문이 남고 상세 화면에 머문다</h3><p>확인: npm test 전체 실행 (STS-05)</p><p>근거: STS-05 ok. 취소 후 URL /orders/{id}, #orderBadge '취소', #flash 에 '취소' 포함, 목록에 취소 칩 +1, 전체 칩 불변 단언 통과</p></div><span class="chip pass">통과</span></div>
       <div class="check"><div class="n">2</div><div>
-        <h3>취소 이력이 보존된다</h3><p>확인: JUnit cancelKeepsOrderAndHistory</p><p>근거: 취소 후 getOrder 성공, 상태 CANCELED, 이력 2행, 마지막 to=CANCELED. OrderFlowTests 10건 통과</p></div><span class="chip pass">통과</span></div>
+        <h3>취소 이력이 보존된다</h3><p>확인: JUnit cancelKeepsOrderAndHistory, cancelInProgressOrderKeepsOrderAndHistory</p><p>근거: 취소 후 getOrder 성공, 상태 CANCELED, 이력 2행(확정 취소) 및 3행(진행 중에서 취소), 마지막 행 to=CANCELED. OrderFlowTests 12건 통과</p></div><span class="chip pass">통과</span></div>
       <div class="check"><div class="n">3</div><div>
-        <h3>기존 테스트가 유지된다</h3><p>확인: gradlew test --rerun-tasks, npm test, git diff</p><p>근거: JUnit 23건, E2E 45건 전부 통과</p></div><span class="chip pass">통과</span></div>
+        <h3>기존 테스트가 유지된다</h3><p>확인: gradlew test --rerun-tasks, npm test</p><p>근거: JUnit 25건(기대 25), E2E 45건 전부 통과. baseline 대비 성공 건수 감소 없음</p></div><span class="chip pass">통과</span></div>
     </div>
 
     <div class="lbl">수용 기준</div>
     <table>
       <thead><tr><th>기준</th><th>결과</th><th>근거</th></tr></thead>
       <tbody>
-        <tr><td>취소 시 주문 삭제 없이 이력 보존 (목적)</td><td><span class="chip pass">통과</span></td><td>JUnit 단언, STS-05 목록 잔존 단언</td></tr>
-        <tr><td>취소 후 목록 화면으로 이동 (목적)</td><td><span class="chip pass">통과</span></td><td>STS-05 의 toHaveURL(/orders)</td></tr>
-        
-        <tr><td>요청 범위만 변경 (범위)</td><td><span class="chip pass">통과</span></td><td>git diff 4파일, 목록 JS 스키마 INTENT 미변경</td></tr>
+        <tr><td>취소 시 주문 삭제 없이 이력 보존 (목적)</td><td><span class="chip pass">통과</span></td><td>JUnit 3건 단언, STS-05 목록 잔존 단언. git diff 에서 orders.delete 제거 확인</td></tr>
+        <tr><td>취소 후 삭제 화면 문제 해소: 오류 없이 상태 표시 (목적)</td><td><span class="chip pass">통과</span></td><td>STS-05 가 상세 URL 유지, '취소' 배지, 완료 메시지를 단언 (팀원 리뷰로 목록 이동에서 방향 변경)</td></tr>
+        <tr><td>요청 범위만 변경 (범위)</td><td><span class="chip pass">통과</span></td><td>git diff main...HEAD -- src: OrderService.java, order-status.spec.ts, OrderFlowTests.java 3파일</td></tr>
       </tbody>
     </table>
 
@@ -129,26 +129,27 @@ footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
     <table>
       <thead><tr><th>확인 항목</th><th>결과</th><th>근거</th></tr></thead>
       <tbody>
-        <tr><td>인수 조건 충족</td><td><span class="chip pass">통과</span></td><td>보존, 이력, 이동을 STS-05 와 JUnit 이 각각 단언</td></tr>
-        <tr><td>기존 기능 유지</td><td><span class="chip pass">통과</span></td><td>회귀 68/68 통과, 기존 테스트 기대값 변경 없음 (STS-05 의 test.fail 제거만)</td></tr>
+        <tr><td>인수 조건 충족</td><td><span class="chip pass">통과</span></td><td>보존, 이력, 상세 유지를 STS-05 와 JUnit 이 각각 단언. 취소된 주문의 추가 변경 거부도 JUnit 으로 확인</td></tr>
+        <tr><td>기존 기능 유지</td><td><span class="chip pass">통과</span></td><td>회귀 70/70 통과. 기존 테스트 기대값 약화 없음 (STS-05 는 test.fail 제거 후 단언 강화)</td></tr>
         <tr><td>요구사항과 충돌 없음</td><td><span class="chip pass">통과</span></td><td>PRD 63-64행과 일치. INTENT.md 28, 41행은 옛 서술이라 갱신 필요 (남은 이슈)</td></tr>
       </tbody>
     </table>
 
     <div class="lbl">Regression Test (보유한 테스트 전체)</div>
     <div class="tiles">
-      <div class="tile"><b>68</b><span>전체</span></div>
-      <div class="tile okt"><b>68</b><span>통과</span></div>
+      <div class="tile"><b>70</b><span>전체</span></div>
+      <div class="tile okt"><b>70</b><span>통과</span></div>
       <div class="tile"><b>0</b><span>실패</span></div>
       <div class="tile"><b>0</b><span>건너뜀</span></div>
     </div>
     <table>
       <thead><tr><th>테스트</th><th>실행 명령</th><th class="n">baseline</th><th class="n">전체</th><th class="n">통과</th><th class="n">실패</th><th class="n">건너뜀</th></tr></thead>
       <tbody>
-        <tr><td>JUnit</td><td><code>./gradlew.bat test --rerun-tasks</code></td><td class="n">22</td><td class="n">23</td><td class="n">23</td><td class="n">0</td><td class="n">0</td></tr>
+        <tr><td>JUnit</td><td><code>./gradlew.bat test --rerun-tasks</code></td><td class="n">22</td><td class="n">25</td><td class="n">25</td><td class="n">0</td><td class="n">0</td></tr>
         <tr><td>E2E (Playwright)</td><td><code>npm test</code></td><td class="n">45</td><td class="n">45</td><td class="n">45</td><td class="n">0</td><td class="n">0</td></tr>
       </tbody>
     </table>
+    <p class="src">JUnit 내역: DemoApplicationTests 1, OrderFlowTests 12, PlannerTest 12. 실패·건너뜀 0.</p>
 
     <div class="lbl">실행하지 못한 검증</div>
     <ul><li>없음</li></ul>
@@ -157,29 +158,29 @@ footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
     <table>
       <thead><tr><th>점검</th><th>실행 명령</th><th>결과</th><th>비고</th></tr></thead>
       <tbody>
-        <tr><td>컴파일 경고</td><td><code>./gradlew.bat compileJava compileTestJava --warning-mode all --rerun-tasks</code></td><td><span class="chip pass">통과</span></td><td>경고 0건</td></tr>
-        <tr><td>린트 · 포매터</td><td>—</td><td><span class="chip skip">미설정</span></td><td>build.gradle 에 도구 없음, .editorconfig 없음. 탭 들여쓰기는 유지</td></tr>
+        <tr><td>컴파일 경고</td><td><code>./gradlew.bat compileJava compileTestJava --warning-mode all --rerun-tasks</code></td><td><span class="chip pass">통과</span></td><td>경고 0건. 탭 들여쓰기 등 주변 컨벤션 유지</td></tr>
+        <tr><td>린트 · 포매터</td><td>—</td><td><span class="chip skip">미설정</span></td><td>build.gradle 에 도구 없음, .editorconfig 없음</td></tr>
       </tbody>
     </table>
 
     <div class="lbl">테스트 커버리지</div>
-    <div class="top"><span>STS-05 가 취소 후 URL 과 목록 잔존을, OrderFlowTests.cancelKeepsOrderAndHistory 가 보존과 이력을 직접 단언합니다.</span><span class="chip pass">추가함</span></div>
-    <p class="src">implement 가 추가한 테스트: <code>OrderFlowTests.java</code>, <code>order-status.spec.ts</code> 수정. 직접 실행해 통과 확인</p>
+    <div class="top"><span>변경 동작을 직접 단언하는 테스트가 있고 직접 실행해 통과를 확인했습니다. STS-05 는 상세 유지, JUnit 은 보존·이력·취소 후 변경 거부를 단언합니다.</span><span class="chip pass">추가함</span></div>
+    <p class="src">추가·수정한 테스트: <code>OrderFlowTests.java</code> (3건), <code>order-status.spec.ts</code> (STS-05 정상화와 단언 변경)</p>
 
-    <div class="lbl">변경한 파일 (4개)</div>
-    <ul><li><code>src/main/java/com/example/demo/service/OrderService.java</code></li><li><code>src/main/resources/static/js/order-detail.js</code></li><li><code>src/test/e2e/order-status.spec.ts</code></li><li><code>src/test/java/com/example/demo/OrderFlowTests.java</code></li></ul>
+    <div class="lbl">변경한 파일 (main 대비 3개)</div>
+    <ul><li><code>src/main/java/com/example/demo/service/OrderService.java</code></li><li><code>src/test/e2e/order-status.spec.ts</code></li><li><code>src/test/java/com/example/demo/OrderFlowTests.java</code></li></ul>
   </section>
 
   <h2><span class="no">4</span>결론</h2>
   <section class="card">
-    <div><span class="chip pass">PASS</span> <span class="src">&nbsp;2026-10-22 13:33 · 1번째 라운드</span></div>
-    <p class="headline">취소는 주문과 이력을 남기고 상세 화면은 목록으로 이동합니다.</p>
+    <div><span class="chip pass">PASS</span> <span class="src">&nbsp;2026-10-22 14:08 · 2번째 라운드</span></div>
+    <p class="headline">취소는 주문과 이력을 남기고, 상세 화면은 '취소' 상태와 완료 메시지를 보여 주며 머뭅니다.</p>
     <div class="lbl">요청</div>
     <div class="quote">주문 취소 시 데이터를 삭제하지 않고 이력을 남길 수 있도록 수정해줘. 그리고 주문상세 화면에서 삭제 후 해당화면에 머무르고있으면서 주문내역이 없다고 표시하는 것보다 다시 목록화면으로 이동시키는게 좋을 것 같아.</div>
     <div class="lbl">남은 이슈</div>
-    <ul><li>docs/INTENT.md 28, 41행이 아직 취소 시 삭제로 서술됨</li><li>이미 삭제된 주문은 복구 불가</li><li>이동 후 성공 메시지 미표시</li></ul>
+    <ul><li>docs/INTENT.md 28, 41행이 아직 취소 시 삭제로 서술됨</li><li>이미 삭제된 주문은 복구 불가</li><li>요청 원문의 목록 이동은 팀원 리뷰로 상세 유지로 바뀜 (요청자 확인 권장)</li></ul>
     <div class="lbl">다음에 할 일</div>
-    <div>변경 파일을 검토하고 INTENT.md 갱신 여부를 정한 뒤 커밋 여부를 결정하세요.</div>
+    <div>변경 파일을 검토하고 INTENT.md 갱신 여부를 정한 뒤 PR 을 진행하세요.</div>
     <div class="lbl">자세히</div>
     <div class="links"><a href="precheck.html">점검 페이지</a></div>
   </section>
@@ -187,12 +188,25 @@ footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
   <details>
     <summary>확인한 근거 (실행 출력 발췌)</summary>
     <pre>gradlew test --rerun-tasks: BUILD SUCCESSFUL
-JUnit xml: tests=1 / 10 / 12 (합 23), skipped=0 failures=0 errors=0
-Playwright: ok 35 STS-05 주문 취소 (498ms) ... 45 passed (32.1s)
-compileJava compileTestJava: BUILD SUCCESSFUL, 경고 없음</pre>
+JUnit xml: DemoApplicationTests tests=1, OrderFlowTests tests=12, PlannerTest tests=12 (합 25), skipped=0 failures=0 errors=0
+Playwright: 45 passed (31.9s)
+compileJava compileTestJava --warning-mode all --rerun-tasks: BUILD SUCCESSFUL, 경고 없음
+netstat: 8091 LISTENING 없음 (TIME_WAIT 만 남음), 8080 서버는 건드리지 않음</pre>
   </details>
 
-  <footer>report · TASK-003 · 구현 후 보고 증거</footer>
+  <h2><span class="no">5</span>회차 이력</h2>
+  <section class="card">
+    <table>
+      <thead><tr><th>회차</th><th>커밋</th><th>구현 내용</th><th>판정</th><th class="n">JUnit</th><th class="n">E2E</th></tr></thead>
+      <tbody>
+        <tr><td>1회차</td><td>dabe0c8</td><td>취소 시 delete 제거, 취소 성공 시 /orders 로 이동, STS-05 test.fail 제거, JUnit 1건 추가</td><td><span class="chip pass">PASS</span></td><td class="n">23</td><td class="n">45</td></tr>
+        <tr><td>2회차</td><td>c689c09</td><td>팀원 리뷰 반영: 목록 이동을 없애고 상세 유지(메시지와 '취소' 배지), 주석 처리된 삭제 코드와 미사용 변수 제거, STS-05 단언 변경, JUnit 2건 추가</td><td><span class="chip pass">PASS</span></td><td class="n">25</td><td class="n">45</td></tr>
+      </tbody>
+    </table>
+    <p>2회차에서는 팀원 리뷰 제안에 따라 취소 후 동작을 목록 이동에서 상세 화면 유지로 바꾸고 STS-05 단언을 그에 맞췄습니다. 또한 불필요한 코드를 정리하고 진행 중 취소와 취소 후 변경 거부를 JUnit 으로 보강했습니다.</p>
+  </section>
+
+  <footer>report · TASK-003 · 구현 후 보고 증거 (2회차)</footer>
 </div>
 </body>
 </html>

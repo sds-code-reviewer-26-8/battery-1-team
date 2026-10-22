@@ -195,6 +195,19 @@ footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
       <dl class="kv"><dt>확인 방법</dt><dd><code>./gradlew.bat test --rerun-tasks</code> 와 <code>npm test</code> 실행, 그리고 <code>git diff main...HEAD</code> 로 변경 범위 확인</dd><dt>합격 기준</dt><dd>JUnit 22건, E2E 45건 전부 통과(STS-05 는 test.fail 제거 후 통과). 변경 파일이 취소 처리와 화면 이동에 한정됨. docs/evidence/ 는 제외</dd></dl></div></section>
   </div>
 
+  <h2><span class="no">9</span>회차 이력</h2>
+  <section class="card">
+    <p>이 문서는 구현 전 점검(1회차)의 기록이며 baseline, 영향도, 위험은 그대로 유효합니다. 팀원 리뷰를 반영하면서 체크리스트 1번의 합격 기준이 바뀌어 2회차로 이력을 남깁니다. 2회차 검증 결과는 <a href="report.html">report.html</a> 에 있습니다.</p>
+    <table>
+      <thead><tr><th style="width:70px">회차</th><th>시점</th><th>체크리스트 1번 합격 기준</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>1회차</td><td>구현 전 점검</td><td>취소 후 URL 이 /orders 로 이동, 목록에 '취소' 배지로 남고 취소 칩 +1, 전체 칩 불변</td><td>커밋 dabe0c8</td></tr>
+        <tr><td>2회차</td><td>2026-10-22 14:08 · 팀원 리뷰 반영</td><td>취소 후 상세 화면(/orders/{id})에 머물고 '취소' 배지와 완료 메시지가 보임, 목록에 '취소' 로 남고 취소 칩 +1, 전체 칩 불변</td><td>커밋 c689c09</td></tr>
+      </tbody>
+    </table>
+    <p class="src" style="margin-top:10px">변경 이유: 취소된 주문이 이제 남아 상세 화면이 정상으로 열리므로, 취소 직후 완료 표시를 보여 주는 쪽이 사용자 혼란이 적다는 리뷰를 받아들였습니다. 체크리스트 2번(이력 보존)과 3번(기존 테스트 유지)은 그대로이고, 3번의 기대 건수는 JUnit 25건(신규 테스트 3건 포함), E2E 45건입니다.</p>
+  </section>
+
   <details>
     <summary>확인한 근거 (읽은 파일 · 실행한 명령)</summary>
     <ul>
