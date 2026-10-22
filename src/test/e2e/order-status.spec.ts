@@ -23,8 +23,12 @@ test('STS-01 상세 화면 구성 (확정 상태)', async ({ page }) => {
   await expect(statusBadge(page)).toHaveText('확정');
   await expect(metaValue(page, '확정 일시')).not.toBeEmpty();
   await expect(metaValue(page, '작성자')).toHaveText('admin');
-  await expect(metaValue(page, '경로')).toHaveText('운항비 최소');
+  await expect(metaValue(page, '경로')).toHaveText('총비용 최소');
   await expect(metaValue(page, '메모')).toHaveText('STS-01');
+
+  // 확정 상태에서는 고객사 이름을 수정할 수 있다
+  await expect(page.locator('#customerName')).toBeEnabled();
+  await expect(page.locator('#customerForm button')).toBeEnabled();
 
   // 버튼은 '진행(으)로 변경', '취소(으)로 변경' 두 개뿐이다
   await expect(statusButtons(page)).toHaveCount(2);
@@ -66,7 +70,9 @@ test('STS-03 진행 → 완료 (최종 상태)', async ({ page }) => {
 
   await expect(statusBadge(page)).toHaveText('완료');
   await expect(statusButtons(page)).toHaveCount(0);
-  await expect(page.getByText('최종 상태라 더 바꿀 수 없습니다.')).toBeVisible();
+  // 완료 상태에서는 고객사 이름 입력칸과 수정 버튼이 비활성화된다
+  await expect(page.locator('#customerName')).toBeDisabled();
+  await expect(page.locator('#customerForm button')).toBeDisabled();
 
   // 이력 3행(확정 → 진행 → 완료)이 시간순
   const history = await historyOf(page);

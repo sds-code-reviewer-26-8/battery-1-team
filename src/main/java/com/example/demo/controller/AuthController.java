@@ -1,6 +1,8 @@
 package com.example.demo.controller;
 
 import com.example.demo.config.LoginInterceptor;
+import com.example.demo.service.BusinessException;
+import com.example.demo.service.MemberService;
 import jakarta.servlet.http.HttpSession;
 import java.net.URI;
 import java.util.Map;
@@ -15,7 +17,11 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @Controller
 public class AuthController {
 
-	private static final String ACCOUNT = "admin";
+	private final MemberService memberService;
+
+	public AuthController(MemberService memberService) {
+		this.memberService = memberService;
+	}
 
 	@GetMapping("/")
 	public String home() {
@@ -35,11 +41,31 @@ public class AuthController {
 	@ResponseBody
 	public ResponseEntity<?> login(@RequestParam String username, @RequestParam String password,
 			HttpSession session) {
-		if (ACCOUNT.equals(username) && ACCOUNT.equals(password)) {
+		if (memberService.authenticate(username, password)) {
 			session.setAttribute(LoginInterceptor.SESSION_USER, username);
 			return ResponseEntity.status(HttpStatus.FOUND).location(URI.create("/orders")).build();
 		}
 		return ResponseEntity.ok(Map.of("error", "아이디 또는 비밀번호가 올바르지 않습니다"));
+	}
+
+	@GetMapping("/signup")
+	public String signupForm(HttpSession session) {
+		if (session.getAttribute(LoginInterceptor.SESSION_USER) != null) {
+			return "redirect:/orders";
+		}
+		return "forward:/pages/signup.html";
+	}
+
+	/** 가입만 한다(자동 로그인 없음). 거부 사유는 400 JSON 으로 돌려준다. */
+	@PostMapping("/signup")
+	@ResponseBody
+	public ResponseEntity<?> signup(@RequestParam String username, @RequestParam String password) {
+		try {
+			memberService.signup(username, password);
+		} catch (BusinessException e) {
+			return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+		}
+		return ResponseEntity.status(HttpStatus.CREATED).build();
 	}
 
 	@PostMapping("/logout")

@@ -19,8 +19,12 @@
 	<div id="content" hidden>
 		<section class="card">
 			<dl class="meta" id="meta"></dl>
+			<form id="customerForm" class="inline-form">
+				<label for="customerName">고객사 이름</label>
+				<input type="text" id="customerName" maxlength="100">
+				<button type="submit">수정</button>
+			</form>
 			<div class="actions" id="actions"></div>
-			<p class="muted" id="finalNote" hidden>최종 상태라 더 바꿀 수 없습니다.</p>
 		</section>
 
 		<section class="card">

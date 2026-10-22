@@ -7,11 +7,13 @@ import java.util.Map;
 /**
  * 경로 하나에 대한 계획. 모든 시각은 주문일(0일차)부터 센 일수이다.
  *
+ * @param operatingCost 공장 운영비(원). 운영비가 없던 때 확정된 계획에서는 null
+ * @param operatingDays 나라별 공장 운영일수. 운영비가 없던 때 확정된 계획에서는 null
  * @param stock      국가별 재고(K). index t 는 t일 시점(그 시각의 수거 반영 후)의 재고
  * @param production 국가별 생산량(K). index t 는 t일~t+1일 동안의 생산량
  */
-public record Plan(String type, String label, int totalDays, long productionCost, long shippingCost, long totalCost,
-		List<ShipPlan> ships, Map<Country, int[]> stock, Map<Country, int[]> production) {
+public record Plan(String type, String label, int totalDays, long productionCost, long shippingCost,
+		Long operatingCost, long totalCost, Map<Country, Integer> operatingDays, List<ShipPlan> ships, Map<Country, int[]> stock, Map<Country, int[]> production) {
 
 	public record ShipPlan(int no, List<Trip> trips, int sailDays) {
 	}

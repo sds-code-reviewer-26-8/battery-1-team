@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>prepare 점검 기록</title>
+<style>
+  :root {
+    --bg: #f5f7fa; --card: #ffffff; --text: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --accent: #2563eb; --accent-soft: #dbeafe;
+    --ok: #15803d; --ok-soft: #dcfce7; --warn: #b45309; --warn-soft: #fef3c7;
+    --bad: #b91c1c; --bad-soft: #fee2e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111827; --card: #1f2937; --text: #f3f4f6; --muted: #9ca3af; --line: #374151;
+      --accent: #60a5fa; --accent-soft: #1e3a5f;
+      --ok: #4ade80; --ok-soft: #14532d; --warn: #fbbf24; --warn-soft: #78350f;
+      --bad: #f87171; --bad-soft: #7f1d1d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.6;
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; }
+  header, main { max-width: 900px; margin: 0 auto; padding: 0 16px; }
+  header { padding-top: 24px; }
+  main { padding-bottom: 32px; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 10px; font-size: 16px; }
+  .badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+  .badge.READY { background: var(--ok-soft); color: var(--ok); }
+  .badge.HILP { background: var(--warn-soft); color: var(--warn); }
+  .badge.ALREADY_EXISTS { background: var(--accent-soft); color: var(--accent); }
+  .badge.yes { background: var(--ok-soft); color: var(--ok); }
+  .badge.no { background: var(--bad-soft); color: var(--bad); }
+  .badge.high { background: var(--bad-soft); color: var(--bad); }
+  .badge.mid { background: var(--warn-soft); color: var(--warn); }
+  .badge.low { background: var(--accent-soft); color: var(--accent); }
+  .meta { color: var(--muted); font-size: 13px; }
+  .req { white-space: pre-wrap; background: var(--bg); border-radius: 8px; padding: 10px 12px; margin: 8px 0 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .sec h3 { margin: 0 0 6px; font-size: 14px; }
+  .label { color: var(--muted); font-size: 12px; margin: 8px 0 2px; }
+  ul { margin: 4px 0; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  .alert { border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+  .alert.warn { background: var(--warn-soft); color: var(--text); border: 1px solid var(--warn); }
+  .alert.warn strong { color: var(--warn); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .check { display: grid; grid-template-columns: 28px 1fr; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .check:last-child { border-bottom: 0; }
+  .num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+  .empty { color: var(--muted); text-align: center; padding: 40px 0; }
+  a { color: var(--accent); }
+  .none { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>prepare 점검 기록</h1>
+  <p class="sub" id="sub">/ih 의 준비 단계가 구현 전에 점검한 내용입니다.</p>
+</header>
+<main id="view"></main>
+
+<script>
+// 점검 한 건. build-precheck.cjs 가 실행할 때마다 이 자리에 JSON 을 넣어 새 HTML 을 만든다.
+var entry = {"id":"20261022_154200","createdAt":"2026-10-22 15:42:00","round":1,"maxRounds":3,"status":"READY","request":"PR #19 리뷰 코멘트 반영: (1) 아이디 소문자 정규화 (2-a) 비밀번호 최대 64자, JUnit·E2E 추가","understanding":{"background":{"understood":true,"summary":"Alice/alice 가 다른 아이디로 가입되고 비밀번호 상한이 없음.","evidence":["MemberService.signup"],"gaps":[]},"purpose":{"understood":true,"summary":"중복 계정 혼동 방지와 해시 입력 상한.","evidence":["요청 본문"],"gaps":[]}},"scale":{"level":"작음","reason":"서비스 중심 + 테스트","files":["MemberService.java","OrderFlowTests.java","signup.spec.ts"],"userAware":true},"risks":[{"severity":"중간","description":"대문자로 저장된 기존 회원은 로그인 불가해질 수 있음","userAware":false}],"hilp":{"reason":"","warnings":[],"questions":[]},"checklist":[{"title":"대소문자 정규화","how":"JUnit: Alice 가입 후 alice 가입 400, ALICE 로 로그인 성공","why":"핵심 요청"},{"title":"비밀번호 64/65자","how":"64자 201, 65자 400 과 사유 메시지","why":"핵심 요청"},{"title":"회귀","how":"admin/admin 로그인, ADMIN 가입 거부, 기존 문구, mvn test","why":"기존 동작 보존"}],"assumptions":["trim 후 toLowerCase(Locale.ROOT)"],"existing":["MemberService — 수정 대상","signup.spec.ts — 확장"],"feedback":"","logFile":"inspection_20261022_154200.log"};
+</script>
+<script>
+(function () {
+  var LOG_DIR = '../../../logs/prepare/'; // 로그 파일(inspection_*.log)이 있는 곳 (이 페이지 기준 상대 경로)
+  var view = document.getElementById('view');
+
+  // 데이터는 모두 textContent 로 넣는다(문자열을 HTML 로 해석하지 않는다).
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+  function arr(x) { return Array.isArray(x) ? x : []; }
+  function badge(text, cls) { return el('span', 'badge ' + cls, text); }
+  function card(title) { var c = el('section', 'card'); c.appendChild(el('h2', null, title)); return c; }
+  function list(items) {
+    var ul = el('ul');
+    items.forEach(function (t) { ul.appendChild(el('li', null, t)); });
+    return ul;
+  }
+  function labeled(parent, label, items) {
+    items = arr(items).filter(Boolean);
+    if (!items.length) return;
+    parent.appendChild(el('div', 'label', label));
+    parent.appendChild(list(items));
+  }
+  function sevClass(s) { return s === '높음' ? 'high' : s === '중간' ? 'mid' : 'low'; }
+
+  function understandingBox(title, u) {
+    u = u || {};
+    var box = el('div', 'sec');
+    var h = el('h3', null, title + ' ');
+    h.appendChild(badge(u.understood ? '이해함' : '이해 못함', u.understood ? 'yes' : 'no'));
+    box.appendChild(h);
+    box.appendChild(el('div', null, u.summary || '(요약 없음)'));
+    labeled(box, '근거', u.evidence);
+    labeled(box, '부족한 점', u.gaps);
+    return box;
+  }
+
+  function render(d) {
+    view.textContent = '';
+    document.title = 'prepare 점검 기록 - ' + (d.createdAt || d.id || '');
+    document.getElementById('sub').textContent =
+      '/ih 의 준비 단계가 구현 전에 점검한 내용입니다. (' + (d.createdAt || d.id || '') + ')';
+
+    // 요약
+    var top = card('요약');
+    var line = el('div');
+    line.appendChild(badge(d.status || '?', d.status || ''));
+    var round = d.round ? ' · 라운드 ' + d.round + (d.maxRounds ? '/' + d.maxRounds : '') : '';
+    line.appendChild(el('span', 'meta', '  ' + (d.createdAt || d.id || '') + round));
+    top.appendChild(line);
+    top.appendChild(el('div', 'label', '요청'));
+    top.appendChild(el('div', 'req', d.request || '(요청 없음)'));
+    if (d.logFile) {
+      var p = el('p', 'meta');
+      p.appendChild(document.createTextNode('로그 파일: '));
+      var a = el('a', null, d.logFile);
+      a.href = encodeURI(LOG_DIR + d.logFile);
+      p.appendChild(a);
+      top.appendChild(p);
+    }
+    view.appendChild(top);
+
+    // 이미 있는 기능 (구현하지 않고 끝난 경우)
+    if (d.status === 'ALREADY_EXISTS') {
+      var ae = d.alreadyExists || {};
+      var ac0 = card('이미 있는 기능입니다 — 구현하지 않았습니다');
+      ac0.appendChild(el('p', null, ae.summary || ''));
+      labeled(ac0, '있는 곳', ae.locations);
+      if (ae.howToUse) { ac0.appendChild(el('div', 'label', '사용 방법')); ac0.appendChild(el('div', null, ae.howToUse)); }
+      view.appendChild(ac0);
+    }
+
+    // HILP
+    var h = d.hilp || {};
+    if (d.status === 'HILP') {
+      var c = card('사람의 확인이 필요합니다 (HILP)');
+      if (h.reason) c.appendChild(el('p', null, h.reason));
+      arr(h.warnings).forEach(function (w) {
+        var al = el('div', 'alert warn');
+        al.appendChild(el('strong', null, '경고 '));
+        al.appendChild(document.createTextNode(w));
+        c.appendChild(al);
+      });
+      if (arr(h.questions).length) {
+        c.appendChild(el('div', 'label', '질문'));
+        var ol = el('ol');
+        h.questions.forEach(function (q) { ol.appendChild(el('li', null, q)); });
+        c.appendChild(ol);
+      }
+      view.appendChild(c);
+    }
+
+    // 이해 점검
+    var u = d.understanding || {};
+    var uc = card('이해 점검');
+    var g = el('div', 'grid');
+    g.appendChild(understandingBox('배경 (어떤 상황인가)', u.background));
+    g.appendChild(understandingBox('목적 (왜 필요한가)', u.purpose));
+    uc.appendChild(g);
+    view.appendChild(uc);
+
+    // 기존 기능 확인 (기능 추가·변경 요청일 때만 있다)
+    if (arr(d.existing).length) {
+      var ec = card('기존 기능 확인');
+      ec.appendChild(list(d.existing));
+      view.appendChild(ec);
+    }
+
+    // 규모·위험
+    var sc = d.scale || {};
+    var rc = card('규모·위험 점검');
+    var sl = el('div');
+    sl.appendChild(document.createTextNode('변경 규모: '));
+    sl.appendChild(badge(sc.level || '?', sc.level === '매우 큼' ? 'high' : sc.level === '큼' ? 'mid' : 'low'));
+    if (sc.userAware !== undefined) {
+      sl.appendChild(document.createTextNode('  사용자 인지: '));
+      sl.appendChild(badge(sc.userAware ? '예' : '아니오', sc.userAware ? 'yes' : 'no'));
+    }
+    rc.appendChild(sl);
+    if (sc.reason) rc.appendChild(el('p', null, sc.reason));
+    labeled(rc, '바뀔 파일', sc.files);
+    var risks = arr(d.risks);
+    if (risks.length) {
+      var t = el('table');
+      var thead = el('thead'), hr = el('tr');
+      ['심각도', '위험', '사용자 인지'].forEach(function (x) { hr.appendChild(el('th', null, x)); });
+      thead.appendChild(hr); t.appendChild(thead);
+      var tb = el('tbody');
+      risks.forEach(function (r) {
+        var tr = el('tr');
+        var c1 = el('td'); c1.appendChild(badge(r.severity || '?', sevClass(r.severity))); tr.appendChild(c1);
+        tr.appendChild(el('td', null, r.description || ''));
+        var c3 = el('td'); c3.appendChild(badge(r.userAware ? '예' : '아니오', r.userAware ? 'yes' : 'no')); tr.appendChild(c3);
+        tb.appendChild(tr);
+      });
+      t.appendChild(tb);
+      rc.appendChild(el('div', 'label', '위험'));
+      rc.appendChild(t);
+    } else {
+      rc.appendChild(el('p', 'none', '기록된 위험이 없습니다.'));
+    }
+    view.appendChild(rc);
+
+    // 체크리스트
+    var cl = arr(d.checklist);
+    var cc = card('구현 후 확인 체크리스트 (중요 3개)');
+    if (!cl.length) {
+      cc.appendChild(el('p', 'none', d.status === 'HILP' ? 'HILP 라서 정하지 않았습니다.'
+        : d.status === 'ALREADY_EXISTS' ? '이미 있는 기능이라 구현하지 않아 정하지 않았습니다.' : '체크리스트가 없습니다.'));
+    }
+    cl.forEach(function (it, i) {
+      var row = el('div', 'check');
+      row.appendChild(el('span', 'num', String(i + 1)));
+      var body = el('div');
+      body.appendChild(el('strong', null, it.title || ''));
+      body.appendChild(el('div', 'label', '확인 방법'));
+      body.appendChild(el('div', null, it.how || ''));
+      body.appendChild(el('div', 'label', '중요한 이유'));
+      body.appendChild(el('div', null, it.why || ''));
+      row.appendChild(body);
+      cc.appendChild(row);
+    });
+    view.appendChild(cc);
+
+    // 가정, 직전 라운드
+    if (arr(d.assumptions).length) {
+      var ac = card('가정');
+      ac.appendChild(list(d.assumptions));
+      view.appendChild(ac);
+    }
+    if (d.feedback) {
+      var fc = card('직전 라운드 실패와 대응');
+      fc.appendChild(el('div', 'req', d.feedback));
+      view.appendChild(fc);
+    }
+  }
+
+  if (!entry) {
+    view.appendChild(el('div', 'empty', '점검 데이터가 없습니다. 이 파일은 템플릿입니다.'));
+    return;
+  }
+  render(entry);
+})();
+</script>
+</body>
+</html>

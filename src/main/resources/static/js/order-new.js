@@ -181,7 +181,7 @@
 				<strong>${o.label}</strong>
 				<span>소요 ${o.totalDays}일</span>
 				<span>총 비용 ${eok(o.totalCost)}억원</span>
-				<span class="muted">운항비 ${eok(o.shippingCost)}억원 · 배 ${o.ships.length}척</span>
+				<span class="muted">운항비 ${eok(o.shippingCost)}억원 · 운영비 ${o.operatingCost == null ? '-' : eok(o.operatingCost) + '억원'} · 배 ${o.ships.length}척</span>
 			</button>`).join('');
 		optionsEl.querySelectorAll('.option').forEach(b => b.addEventListener('click', () => {
 			selected = b.dataset.type;
@@ -222,7 +222,8 @@
 				routeType: selected,
 				masterVersion: result.master.version,
 				memo: document.getElementById('memo').value,
-					dueDays: dueLimit()
+				dueDays: dueLimit(),
+				customerName: document.getElementById('customerName').value
 			});
 			location.href = '/orders/' + res.id;
 		} catch (e) {

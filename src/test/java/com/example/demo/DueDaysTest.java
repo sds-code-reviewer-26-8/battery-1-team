@@ -59,7 +59,7 @@ class DueDaysTest {
 	@Test
 	void serviceRejectsOutOfRangeWithSameMessage() {
 		for (int d : new int[] {4, 51}) {
-			assertThatThrownBy(() -> orderService.confirm(Map.of(), "FAST", 0L, null, d, "admin"))
+			assertThatThrownBy(() -> orderService.confirm(Map.of(), "FAST", 0L, null, null, d, "admin"))
 					.isInstanceOf(BusinessException.class).hasMessage(EXPECTED);
 		}
 	}

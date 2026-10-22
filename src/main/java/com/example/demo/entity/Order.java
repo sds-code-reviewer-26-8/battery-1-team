@@ -48,6 +48,9 @@ public class Order {
 	@Column(length = 1000)
 	private String memo;
 
+	@Column(length = 100)
+	private String customerName;
+
 	/** 확정 시점의 계획 스냅샷(주문 수량, 마스터 값, 경로, 일별 생산) JSON */
 	@Lob
 	@Column(nullable = false)
@@ -63,8 +66,8 @@ public class Order {
 	}
 
 	public Order(LocalDateTime confirmedAt, String createdBy, int totalK, String routeType, String routeLabel,
-			int totalDays, long productionCost, long shippingCost, long totalCost, String memo, String planJson,
-			Integer dueDays) {
+			int totalDays, long productionCost, long shippingCost, long totalCost, String memo, String customerName,
+			String planJson, Integer dueDays) {
 		this.confirmedAt = confirmedAt;
 		this.createdBy = createdBy;
 		this.totalK = totalK;
@@ -75,6 +78,7 @@ public class Order {
 		this.shippingCost = shippingCost;
 		this.totalCost = totalCost;
 		this.memo = memo;
+		this.customerName = customerName;
 		this.planJson = planJson;
 		this.dueDays = dueDays;
 		this.status = OrderStatus.CONFIRMED;
@@ -130,6 +134,14 @@ public class Order {
 
 	public String getMemo() {
 		return memo;
+	}
+
+	public String getCustomerName() {
+		return customerName;
+	}
+
+	public void setCustomerName(String customerName) {
+		this.customerName = customerName;
 	}
 
 	public String getPlanJson() {

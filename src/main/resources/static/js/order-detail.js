@@ -10,16 +10,19 @@
 		if (error) flash.append(h('p', {class: 'alert error'}, error));
 	}
 
-	async function changeStatus(status, version) {
+	async function act(url, body) {
 		let message = null, error = null;
 		try {
-			const res = await postJson('/api/orders/' + id + '/status', {status, version});
+			const res = await postJson(url, body);
 			message = res.message;
 		} catch (e) {
 			error = e.message;
 		}
 		await load(message, error);
 	}
+
+	const changeStatus = (status, version) => act('/api/orders/' + id + '/status', {status, version});
+	const changeCustomer = (customerName, version) => act('/api/orders/' + id + '/customer', {customerName, version});
 
 	function render(o) {
 		document.getElementById('orderId').textContent = '#' + o.id;
@@ -30,12 +33,24 @@
 		const meta = (label, value, cls) => h('div', null, h('dt', null, label), h('dd', cls ? {class: cls} : null, value));
 		document.getElementById('meta').replaceChildren(
 			meta('확정 일시', o.confirmedAt), meta('작성자', o.createdBy), meta('경로', o.routeLabel),
-			meta('납기', o.dueDays != null ? o.dueDays + '일' + (over ? ' (초과)' : '') : '-', over ? 'over-due' : null), meta('메모', o.memo != null ? o.memo : '-'));
+			meta('납기', o.dueDays != null ? o.dueDays + '일' + (over ? ' (초과)' : '') : '-', over ? 'over-due' : null),
+			meta('고객사', o.customerName != null ? o.customerName : '-'),
+			meta('메모', o.memo != null ? o.memo : '-'));
+
+		const customerForm = document.getElementById('customerForm');
+		const customerInput = document.getElementById('customerName');
+		const customerButton = customerForm.querySelector('button');
+		customerInput.value = o.customerName != null ? o.customerName : '';
+		customerInput.disabled = customerButton.disabled = !o.editable;
+		customerButton.title = o.editable ? '' : '완료·취소된 주문의 고객사 이름은 수정할 수 없습니다';
+		customerForm.onsubmit = e => {
+			e.preventDefault();
+			changeCustomer(customerInput.value, o.version);
+		};
 
 		const actions = document.getElementById('actions');
 		actions.replaceChildren();
 		actions.hidden = o.next.length === 0;
-		document.getElementById('finalNote').hidden = o.next.length > 0;
 		for (const s of o.next) {
 			const form = h('form', {method: 'post', class: 'status-form'},
 				h('button', {type: 'submit', class: s.name === 'CANCELED' ? 'danger' : 'primary'}, s.label + '(으)로 변경'));

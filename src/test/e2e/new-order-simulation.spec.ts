@@ -17,7 +17,7 @@ const COUNTRIES = [
   { key: 'INDONESIA', label: '인도네시아', stockLimit: 7000, visits: 1 },
 ] as const;
 
-const OPTION_LABELS = ['운항비 최소', '가장 빠르게', '가까운 곳부터'];
+const OPTION_LABELS = ['총비용 최소', '가장 빠르게', '가까운 곳부터'];
 
 type Option = {
   type: string;
@@ -25,6 +25,7 @@ type Option = {
   days: number;
   totalCost: number; // 억원
   shippingCost: number; // 억원
+  operatingCost: number; // 억원
   ships: number;
 };
 
@@ -97,6 +98,7 @@ async function readOptions(page: Page): Promise<Option[]> {
       days: grab(/소요\s*(\d+)일/),
       totalCost: grab(/총 비용\s*([\d.]+)억원/),
       shippingCost: grab(/운항비\s*([\d.]+)억원/),
+      operatingCost: grab(/운영비\s*([\d.]+)억원/),
       ships: grab(/배\s*(\d+)척/),
     });
   }
@@ -165,13 +167,13 @@ test.describe('주문 추가 — 시뮬레이션', () => {
       await expect(cards.nth(i)).toContainText(/배 \d+척/);
     }
 
-    // '운항비 최소'가 선택되어 있다
+    // '총비용 최소'가 선택되어 있다
     await expect(page.locator('#options .option.selected')).toHaveCount(1);
     await expect(page.locator('#options .option[data-type="COST"]')).toHaveClass(/selected/);
 
     // 요약, 상세, 지도 애니메이션 영역이 채워진다
     await expect(page.locator('#summary')).toContainText('요약');
-    await expect(page.locator('#summary')).toContainText('운항비 최소');
+    await expect(page.locator('#summary')).toContainText('총비용 최소');
     await expect(page.locator('#details')).not.toBeEmpty();
     await expect(page.locator('#details')).toContainText('나라별 주문 수량');
     await expect(page.locator('#anim')).not.toBeEmpty();
@@ -202,17 +204,18 @@ test.describe('주문 추가 — 시뮬레이션', () => {
   test('05. [P1] 경로 옵션 비교 규칙', async ({ page }) => {
     await runSimulation(page);
     const options = await readOptions(page);
-    const cost = options.find((o) => o.label === '운항비 최소')!;
+    const cost = options.find((o) => o.label === '총비용 최소')!;
     const fast = options.find((o) => o.label === '가장 빠르게')!;
     const near = options.find((o) => o.label === '가까운 곳부터')!;
 
-    // 운항비: 운항비 최소 ≤ 가장 빠르게 ≤ 가까운 곳부터
-    expect(cost.shippingCost, '운항비 최소 ≤ 가장 빠르게').toBeLessThanOrEqual(fast.shippingCost);
-    expect(fast.shippingCost, '가장 빠르게 ≤ 가까운 곳부터').toBeLessThanOrEqual(near.shippingCost);
+    // 운항비 + 운영비: 총비용 최소가 가장 작다 (카드 금액은 소수 2자리 반올림이라 0.02 허용)
+    const variable = (o: Option) => o.shippingCost + o.operatingCost;
+    expect(variable(cost), '총비용 최소 ≤ 가장 빠르게').toBeLessThanOrEqual(variable(fast) + 0.02);
+    expect(variable(cost), '총비용 최소 ≤ 가까운 곳부터').toBeLessThanOrEqual(variable(near) + 0.02);
 
-    // 소요 일수: 가장 빠르게 ≤ 운항비 최소, 가장 빠르게 ≤ 가까운 곳부터
-    // (운항비 최소와 가까운 곳부터 사이의 일수 순서는 정하지 않는다)
-    expect(fast.days, '가장 빠르게 ≤ 운항비 최소').toBeLessThanOrEqual(cost.days);
+    // 소요 일수: 가장 빠르게 ≤ 총비용 최소, 가장 빠르게 ≤ 가까운 곳부터
+    // (총비용 최소와 가까운 곳부터 사이의 일수 순서는 정하지 않는다)
+    expect(fast.days, '가장 빠르게 ≤ 총비용 최소').toBeLessThanOrEqual(cost.days);
     expect(fast.days, '가장 빠르게 ≤ 가까운 곳부터').toBeLessThanOrEqual(near.days);
   });
 
@@ -227,7 +230,7 @@ test.describe('주문 추가 — 시뮬레이션', () => {
     const expected = (3000 * 1000 * (700 + 900 + 550 + 450)) / 1e8;
     expect(expected).toBe(78);
     for (const o of options) {
-      const production = o.totalCost - o.shippingCost; // 총 비용 − 운항비
+      const production = o.totalCost - o.shippingCost - o.operatingCost; // 총 비용 − 운항비 − 운영비
       expect(Math.abs(production - expected), `${o.label}의 생산비 ${production.toFixed(2)}억원`).toBeLessThanOrEqual(0.01);
     }
   });

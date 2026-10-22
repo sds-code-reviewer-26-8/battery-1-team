@@ -77,10 +77,10 @@ test.describe('마스터 데이터 (MST)', () => {
     }
   });
 
-  test('MST-03-TC02 기본값(배 3척)에서는 운항비 최소만 1척, 나머지는 3척 — 대조군', async ({ page }) => {
+  test('MST-03-TC02 기본값(배 3척)에서는 총비용 최소만 1척, 나머지는 3척 — 대조군', async ({ page }) => {
     await runDefaultSimulation(page);
     const options = page.locator('#options .option');
-    await expect(options.nth(0)).toContainText('배 1척'); // 운항비 최소
+    await expect(options.nth(0)).toContainText('배 1척'); // 총비용 최소
     await expect(options.nth(1)).toContainText('배 3척'); // 가장 빠르게
     await expect(options.nth(2)).toContainText('배 3척'); // 가까운 곳부터
   });
