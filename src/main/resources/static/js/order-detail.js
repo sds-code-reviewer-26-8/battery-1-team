@@ -36,9 +36,11 @@
 			meta('메모', o.memo != null ? o.memo : '-'));
 
 		const customerForm = document.getElementById('customerForm');
-		customerForm.hidden = !o.editable;
 		const customerInput = document.getElementById('customerName');
+		const customerButton = customerForm.querySelector('button');
 		customerInput.value = o.customerName != null ? o.customerName : '';
+		customerInput.disabled = customerButton.disabled = !o.editable;
+		customerButton.title = o.editable ? '' : '완료·취소된 주문의 고객사 이름은 수정할 수 없습니다';
 		customerForm.onsubmit = e => {
 			e.preventDefault();
 			changeCustomer(customerInput.value, o.version);
@@ -47,7 +49,6 @@
 		const actions = document.getElementById('actions');
 		actions.replaceChildren();
 		actions.hidden = o.next.length === 0;
-		document.getElementById('finalNote').hidden = o.editable;
 		for (const s of o.next) {
 			const form = h('form', {method: 'post', class: 'status-form'},
 				h('button', {type: 'submit', class: s.name === 'CANCELED' ? 'danger' : 'primary'}, s.label + '(으)로 변경'));
