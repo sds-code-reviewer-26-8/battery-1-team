@@ -26,6 +26,11 @@ public enum OrderStatus {
 		};
 	}
 
+	/** 주문 내용(고객사 이름 등)을 수정할 수 있는 상태인가. */
+	public boolean isEditable() {
+		return this == CONFIRMED || this == IN_PROGRESS;
+	}
+
 	public boolean canChangeTo(OrderStatus target) {
 		return next().contains(target);
 	}

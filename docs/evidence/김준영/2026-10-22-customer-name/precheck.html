@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>prepare 리포트 2026-10-22-customer-name</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1d1f24;--muted:#6a7080;--line:#e4e6eb;--soft:#f0f2f5;
+--green:#16803c;--green-bg:#e8f6ee;--yellow:#946200;--yellow-bg:#fff6dd;--red:#c62832;--red-bg:#fdecee;--pending:#6a7080;
+--accent:#3b5bdb;--radius:14px;--shadow:0 1px 2px rgba(20,24,40,.06),0 4px 14px rgba(20,24,40,.04)}
+@media (prefers-color-scheme:dark){:root{--bg:#12141a;--card:#1b1e26;--fg:#e8eaf0;--muted:#9aa1b2;--line:#2b2f3a;--soft:#232733;
+--green:#4cc779;--green-bg:#17301f;--yellow:#e6b94a;--yellow-bg:#352c12;--red:#ff7b83;--red-bg:#3a1a1e;--pending:#9aa1b2;
+--accent:#8ea2ff;--shadow:none}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:28px 16px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--muted);font-size:13px;margin-bottom:14px}
+.kind{font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:24px;line-height:1.3;margin:0 0 6px}
+h2{font-size:17px;margin:34px 0 12px;display:flex;align-items:center;gap:8px}
+h3{font-size:14px;margin:18px 0 8px;color:var(--muted);font-weight:600}
+p{margin:6px 0}
+.muted{color:var(--muted)}.small{font-size:13px}
+code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--soft);padding:1px 6px;border-radius:6px;overflow-wrap:anywhere}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);margin:12px 0}
+.hero{border-left:6px solid var(--pending);padding:20px 22px}
+.hero.GREEN{border-left-color:var(--green)}.hero.YELLOW{border-left-color:var(--yellow)}.hero.RED{border-left-color:var(--red)}
+.hero .msg{font-size:16px;margin:10px 0 0}
+.pill{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:13px;padding:4px 12px;border-radius:999px;background:var(--soft);color:var(--pending)}
+.pill i{width:9px;height:9px;border-radius:50%;background:currentColor}
+.pill.GREEN,.pill.PASS{background:var(--green-bg);color:var(--green)}
+.pill.YELLOW{background:var(--yellow-bg);color:var(--yellow)}
+.pill.RED,.pill.FAIL{background:var(--red-bg);color:var(--red)}
+.pill.big{font-size:15px;padding:6px 16px}
+.areas{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:14px}
+.area{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.stat .n{font-size:24px;font-weight:700;line-height:1.2}.stat .l{color:var(--muted);font-size:13px}
+.stat.GREEN .n{color:var(--green)}.stat.YELLOW .n{color:var(--yellow)}.stat.RED .n{color:var(--red)}
+.note{border-radius:12px;padding:14px 16px;margin:10px 0;border:1px solid transparent}
+.note.RED{background:var(--red-bg);border-color:var(--red)}.note.YELLOW{background:var(--yellow-bg);border-color:var(--yellow)}
+.note .t{font-weight:700;margin-bottom:4px}.note.RED .t{color:var(--red)}.note.YELLOW .t{color:var(--yellow)}
+.note ul{margin:4px 0 0;padding-left:20px}
+.todo{background:var(--card);border:1px dashed var(--line);border-radius:12px;padding:12px 16px;margin:10px 0}
+.todo .t{font-weight:700;margin-bottom:2px}
+.todo ul{margin:4px 0 0;padding-left:20px}
+.ok{display:flex;align-items:center;gap:10px;color:var(--green);font-weight:600}
+.check{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px 16px;list-style:none;margin:8px 0;padding:0}
+.check li{display:flex;gap:8px;align-items:baseline;font-size:14px}
+.check li b{color:var(--green)}.check li .id{color:var(--muted);font-size:12px;min-width:48px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+table{border-collapse:collapse;width:100%;margin:8px 0;font-size:14px}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+th{color:var(--muted);font-weight:600;font-size:12.5px;background:var(--soft)}
+th:first-child{border-top-left-radius:8px}th:last-child{border-top-right-radius:8px}
+details{margin:8px 0}summary{cursor:pointer;color:var(--muted);font-size:14px;padding:4px 0}
+summary:hover{color:var(--fg)}
+ul{margin:4px 0;padding-left:20px}td ul{padding-left:16px;margin:0}
+pre{margin:6px 0;white-space:pre-wrap;background:var(--soft);padding:10px 12px;border-radius:10px;font-size:13px}
+.fail{color:var(--red);font-weight:700}.pass{color:var(--green);font-weight:700}
+.PENDING.pill{background:var(--soft)}
+@media (max-width:560px){.wrap{padding:16px 12px 48px}h1{font-size:21px}.stat .n{font-size:21px}}
+</style></head><body><div class="wrap">
+<div class="top"><span class="kind">prepare 리포트</span><span>2026-10-22-customer-name</span></div>
+<h1>주문 고객사 이름 입력·수정</h1>
+<p class="muted">주문 확정 시 고객사 이름을 입력받아 저장하고, 완료·취소 전까지 수정할 수 있게 한다.</p>
+<div class="card hero YELLOW">
+<div><span class="pill YELLOW big"><i></i>YELLOW</span> <span class="muted small">진행 전 점검 · RED 차단 / YELLOW 확인 필요 / GREEN 이상 없음</span></div>
+<p class="msg">기존 주문 확정 서비스 시그니처가 바뀌어 기존 테스트 호출부 확인이 필요하고, 가정 몇 건이 미확인</p>
+</div>
+<div class="stats"><div class="stat GREEN"><div class="n">24/24</div><div class="l">작업 전 테스트 통과</div></div><div class="stat "><div class="n">보통 · 9개 파일</div><div class="l">변경 규모</div></div><div class="stat YELLOW"><div class="n">3건</div><div class="l">위험</div></div></div>
+
+<h2>위험과 대응</h2><div class="card"><table><thead><tr><th>ID</th><th>위험</th><th>대응</th></tr></thead><tbody><tr><td><span style="white-space:nowrap">위험1</span></td><td>OrderService.confirm 시그니처 변경으로 기존 호출부가 깨질 수 있음</td><td>호출부(OrderController, 테스트)를 함께 수정하고 verify로 확인</td></tr><tr><td><span style="white-space:nowrap">위험2</span></td><td>이름 수정 이력 기록 여부 등 미확인 가정</td><td>spec 가정에 이력 미기록, 선택 입력, 입력값 무검증 저장을 명시</td></tr><tr><td><span style="white-space:nowrap">위험3</span></td><td>화면만 막고 서버에서 완료·취소 수정을 허용할 수 있음</td><td>기준7, 8로 서버 거부를 테스트</td></tr></tbody></table></div><h2>충돌 위험이 있는 핵심 규칙</h2><div class="card"><table><thead><tr><th>규칙</th><th>이유</th></tr></thead><tbody><tr><td>낙관적 락(@Version)으로 동시 변경을 막는다</td><td>이름 수정이 version을 올려 화면의 상태 변경 version과 충돌할 수 있음</td></tr><tr><td>주문 상태 전이: 완료·취소 이후 변경 불가</td><td>이름 수정 경로가 상태 규칙을 우회하면 안 됨</td></tr></tbody></table></div><h2>자세히</h2><div class="card"><details><summary>영향 파일 9개</summary><table><thead><tr><th>경로</th><th>이유</th></tr></thead><tbody><tr><td><code>src/main/java/com/example/demo/entity/Order.java</code></td><td>customerName 필드와 수정 메서드 추가</td></tr><tr><td><code>src/main/java/com/example/demo/service/OrderService.java</code></td><td>확정 시 고객사 저장, 이름 수정 서비스 추가</td></tr><tr><td><code>src/main/java/com/example/demo/controller/OrderController.java</code></td><td>요청·응답 레코드 확장, 이름 수정 API</td></tr><tr><td><code>src/main/resources/static/pages/order-new.html</code></td><td>고객사 입력란</td></tr><tr><td><code>src/main/resources/static/pages/order-detail.html</code></td><td>이름 수정 폼</td></tr><tr><td><code>src/main/resources/static/pages/orders.html</code></td><td>목록에 고객사 열</td></tr><tr><td><code>src/main/resources/static/js/order-new.js</code></td><td>확정 요청에 customerName 전송</td></tr><tr><td><code>src/main/resources/static/js/order-detail.js</code></td><td>고객사 표시, 수정 호출, 수정 불가 시 폼 숨김</td></tr><tr><td><code>src/main/resources/static/js/orders.js</code></td><td>목록 고객사 표시</td></tr></tbody></table></details><details><summary>관련 기존 테스트 1개</summary><table><thead><tr><th>테스트</th><th>이유</th><th>작업 전 상태</th></tr></thead><tbody><tr><td><code>com.example.demo.OrderFlowTests</code></td><td>확정·상태 변경 흐름 회귀 확인 및 신규 기준 추가</td><td>통과</td></tr></tbody></table></details></div>
+</div></body></html>

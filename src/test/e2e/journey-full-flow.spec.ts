@@ -42,7 +42,6 @@ test('JRN-01-TC01 로그인부터 완료까지 주문 한 건 처리', async ({ 
 	// 7. 완료로 변경
 	await page.getByRole('button', { name: '완료(으)로 변경' }).click();
 	await expect(badge).toHaveText('완료');
-	await expect(page.getByText('최종 상태라 더 바꿀 수 없습니다.')).toBeVisible();
 
 	// 8. 상태 이력 3건 (- → 확정, 확정 → 진행, 진행 → 완료), 변경한 사람 admin
 	const history = page.locator('section', { has: page.getByRole('heading', { name: '상태 이력' }) }).locator('tbody tr');

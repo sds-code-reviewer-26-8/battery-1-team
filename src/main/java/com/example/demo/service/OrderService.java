@@ -22,6 +22,7 @@ import tools.jackson.databind.ObjectMapper;
 public class OrderService {
 
 	private static final int MAX_MEMO = 1000;
+	private static final int MAX_CUSTOMER_NAME = 100;
 
 	private final SimulationService simulationService;
 	private final OrderRepository orders;
@@ -42,7 +43,7 @@ public class OrderService {
 	 */
 	@Transactional
 	public Order confirm(Map<Country, Integer> requested, String routeType, long masterVersion, String memo,
-			String user) {
+			String customerName, String user) {
 		SimulationResult result = simulationService.simulate(requested);
 		if (result.master().version() != masterVersion) {
 			throw new BusinessException("시뮬레이션 이후 마스터 데이터가 바뀌었습니다. 다시 시뮬레이션해 주세요", true);
@@ -61,7 +62,8 @@ public class OrderService {
 		int totalK = result.orders().values().stream().mapToInt(Integer::intValue).sum();
 		LocalDateTime now = LocalDateTime.now();
 		Order order = orders.save(new Order(now, user, totalK, plan.type(), plan.label(), plan.totalDays(),
-				plan.productionCost(), plan.shippingCost(), plan.totalCost(), note, json.writeValueAsString(stored)));
+				plan.productionCost(), plan.shippingCost(), plan.totalCost(), note, normalizeCustomerName(customerName),
+				json.writeValueAsString(stored)));
 		histories.save(new OrderStatusHistory(order.getId(), null, OrderStatus.CONFIRMED, user, now));
 		return order;
 	}
@@ -95,22 +97,56 @@ public class OrderService {
 	 */
 	@Transactional
 	public void changeStatus(Long id, OrderStatus target, long expectedVersion, String user) {
-		Order order = getOrder(id);
-		if (order.getVersion() != expectedVersion) {
-			throw conflict();
-		}
+		Order order = loadForUpdate(id, expectedVersion);
 		if (!order.getStatus().canChangeTo(target)) {
 			throw new BusinessException("%s 상태에서는 %s(으)로 바꿀 수 없습니다"
 					.formatted(order.getStatus().getLabel(), target.getLabel()));
 		}
 		OrderStatus from = order.getStatus();
 		order.setStatus(target);
+		saveOrConflict(order);
+		histories.save(new OrderStatusHistory(id, from, target, user, LocalDateTime.now()));
+	}
+
+	/**
+	 * 고객사 이름을 바꾼다. 확정·진행 상태에서만 가능하고, 주문 version(마스터 version 과 별개)이 다르면 거부한다.
+	 */
+	@Transactional
+	public void changeCustomerName(Long id, String customerName, long expectedVersion) {
+		String name = normalizeCustomerName(customerName);
+		Order order = loadForUpdate(id, expectedVersion);
+		if (!order.getStatus().isEditable()) {
+			throw new BusinessException("%s 상태의 주문은 고객사 이름을 바꿀 수 없습니다".formatted(order.getStatus().getLabel()));
+		}
+		order.setCustomerName(name);
+		saveOrConflict(order);
+	}
+
+	/** 주문을 조회하고, 화면에서 본 version 과 다르면(= 그 사이 다른 사람이 바꿈) 충돌로 거부한다. */
+	private Order loadForUpdate(Long id, long expectedVersion) {
+		Order order = getOrder(id);
+		if (order.getVersion() != expectedVersion) {
+			throw conflict();
+		}
+		return order;
+	}
+
+	/** 저장하면서 동시 수정으로 낙관적 락이 깨지면 충돌로 거부한다. */
+	private void saveOrConflict(Order order) {
 		try {
 			orders.saveAndFlush(order);
 		} catch (ObjectOptimisticLockingFailureException e) {
 			throw conflict();
 		}
-		histories.save(new OrderStatusHistory(id, from, target, user, LocalDateTime.now()));
+	}
+
+	/** 앞뒤 공백을 제거하고, 비면 null, 100자를 넘으면 거부한다. */
+	private static String normalizeCustomerName(String customerName) {
+		String name = customerName == null ? null : customerName.strip();
+		if (name != null && name.length() > MAX_CUSTOMER_NAME) {
+			throw new BusinessException("고객사 이름은 %d자 이하로 입력하세요".formatted(MAX_CUSTOMER_NAME));
+		}
+		return name == null || name.isEmpty() ? null : name;
 	}
 
 	private static BusinessException conflict() {

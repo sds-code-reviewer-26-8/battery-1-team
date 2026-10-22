@@ -7,9 +7,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.nullValue;
+
 import com.example.demo.entity.OrderStatus;
 import com.example.demo.service.BusinessException;
 import com.example.demo.service.OrderService;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -147,6 +151,235 @@ class OrderFlowTests {
 		return id;
 	}
 
+	private long confirmWithCustomer(MockHttpSession s, String customerFragment) throws Exception {
+		MvcResult sim = mvc.perform(post("/api/simulate").session(s).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"orders\":" + ORDERS + "}")).andReturn();
+		int version = com.jayway.jsonpath.JsonPath.read(sim.getResponse().getContentAsString(), "$.master.version");
+		MvcResult res = mvc.perform(post("/api/orders").session(s).contentType(MediaType.APPLICATION_JSON)
+						.content("{\"orders\":" + ORDERS + ",\"routeType\":\"FAST\",\"masterVersion\":" + version
+								+ ",\"memo\":\"테스트\"" + customerFragment + "}"))
+				.andExpect(status().isOk()).andReturn();
+		Integer id = com.jayway.jsonpath.JsonPath.read(res.getResponse().getContentAsString(), "$.id");
+		return id;
+	}
+
+	@Test
+	@DisplayName("[기준1] 고객사 이름과 함께 확정하면 상세 조회에 그대로 반환된다")
+	void confirmWithCustomerNameReturnsItInDetail() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, ",\"customerName\":\"ACME\"");
+
+		mvc.perform(get("/api/orders/" + id).session(s))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.customerName").value("ACME"));
+	}
+
+	@Test
+	@DisplayName("[기준2] 고객사 이름 없이 확정하면 상세 조회의 customerName은 null이다")
+	void confirmWithoutCustomerNameReturnsNullInDetail() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, "");
+
+		mvc.perform(get("/api/orders/" + id).session(s))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.customerName").value(nullValue()));
+	}
+
+	@Test
+	@DisplayName("[기준9] 주문 목록 API 각 행에 customerName이 포함된다")
+	void orderListRowsIncludeCustomerName() throws Exception {
+		MockHttpSession s = login();
+		long named = confirmWithCustomer(s, ",\"customerName\":\"LIST-CO\"");
+		long unnamed = confirmWithCustomer(s, "");
+
+		mvc.perform(get("/api/orders").session(s))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.orders[?(@.id==" + named + ")].customerName").value(contains("LIST-CO")))
+				.andExpect(jsonPath("$.orders[?(@.id==" + unnamed + ")].customerName").value(contains(nullValue())));
+	}
+
+	@Test
+	@DisplayName("[기준11] 고객사 이름 없이 확정한 주문도 상태 변경 후 상세 조회가 이름 null로 정상 동작한다")
+	void legacyFlowWithoutCustomerNameStillWorks() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, "");
+
+		orderService.changeStatus(id, OrderStatus.IN_PROGRESS, orderService.getOrder(id).getVersion(), "admin");
+
+		assertThat(orderService.getOrder(id).getStatus()).isEqualTo(OrderStatus.IN_PROGRESS);
+		mvc.perform(get("/api/orders/" + id).session(s))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.customerName").value(nullValue()));
+	}
+
+	private org.springframework.test.web.servlet.ResultActions editCustomer(MockHttpSession s, long id, String name,
+			long version) throws Exception {
+		String nameJson = name == null ? "null" : "\"" + name + "\"";
+		return mvc.perform(post("/api/orders/" + id + "/customer").session(s).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"customerName\":" + nameJson + ",\"version\":" + version + "}"));
+	}
+
+	private org.springframework.test.web.servlet.ResultActions confirmRaw(MockHttpSession s, String customerFragment)
+			throws Exception {
+		MvcResult sim = mvc.perform(post("/api/simulate").session(s).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"orders\":" + ORDERS + "}")).andReturn();
+		int version = com.jayway.jsonpath.JsonPath.read(sim.getResponse().getContentAsString(), "$.master.version");
+		return mvc.perform(post("/api/orders").session(s).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"orders\":" + ORDERS + ",\"routeType\":\"FAST\",\"masterVersion\":" + version
+						+ customerFragment + "}"));
+	}
+
+	@Test
+	@DisplayName("고객사 이름의 앞뒤 공백은 제거하고, 공백뿐이면 null로 확정된다")
+	void confirmTrimsCustomerNameAndBlankBecomesNull() throws Exception {
+		MockHttpSession s = login();
+		long trimmed = confirmWithCustomer(s, ",\"customerName\":\"  ACME  \"");
+		long blank = confirmWithCustomer(s, ",\"customerName\":\"   \"");
+
+		mvc.perform(get("/api/orders/" + trimmed).session(s)).andExpect(jsonPath("$.customerName").value("ACME"));
+		mvc.perform(get("/api/orders/" + blank).session(s)).andExpect(jsonPath("$.customerName").value(nullValue()));
+	}
+
+	@Test
+	@DisplayName("고객사 이름은 100자까지 확정되고, 101자는 400으로 거부된다")
+	void confirmCustomerNameLengthLimit() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, ",\"customerName\":\"" + "가".repeat(100) + "\"");
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value("가".repeat(100)));
+
+		confirmRaw(s, ",\"customerName\":\"" + "가".repeat(101) + "\"")
+				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").exists());
+	}
+
+	@Test
+	@DisplayName("고객사 이름 수정도 공백을 제거하고, 공백뿐이면 null이 되며, 101자는 거부되고 기존 이름이 유지된다")
+	void editCustomerNameNormalizesAndLimitsLength() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, ",\"customerName\":\"OLD\"");
+
+		editCustomer(s, id, "  NEW  ", orderService.getOrder(id).getVersion()).andExpect(status().isOk());
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value("NEW"));
+
+		editCustomer(s, id, "가".repeat(101), orderService.getOrder(id).getVersion())
+				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").exists());
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value("NEW"));
+
+		editCustomer(s, id, "   ", orderService.getOrder(id).getVersion()).andExpect(status().isOk());
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value(nullValue()));
+	}
+
+	@Test
+	@DisplayName("[기준3] 확정 주문의 고객사 이름을 주문 version과 함께 수정하면 반영되고 주문 version이 증가한다")
+	void editCustomerNameOfConfirmedOrderSucceeds() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, ",\"customerName\":\"OLD\"");
+		long before = orderService.getOrder(id).getVersion();
+
+		editCustomer(s, id, "NEW", before).andExpect(status().isOk()).andExpect(jsonPath("$.message").exists());
+
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value("NEW"));
+		assertThat(orderService.getOrder(id).getVersion()).isGreaterThan(before);
+	}
+
+	@Test
+	@DisplayName("[기준4] 진행 주문의 고객사 이름도 수정할 수 있다")
+	void editCustomerNameOfInProgressOrderSucceeds() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, ",\"customerName\":\"OLD\"");
+		orderService.changeStatus(id, OrderStatus.IN_PROGRESS, orderService.getOrder(id).getVersion(), "admin");
+
+		editCustomer(s, id, "NEW", orderService.getOrder(id).getVersion()).andExpect(status().isOk());
+
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value("NEW"));
+	}
+
+	@Test
+	@DisplayName("[기준5] 완료 주문의 고객사 이름 수정은 거부되고 이름이 바뀌지 않는다")
+	void editCustomerNameOfCompletedOrderIsRejected() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, ",\"customerName\":\"OLD\"");
+		orderService.changeStatus(id, OrderStatus.IN_PROGRESS, orderService.getOrder(id).getVersion(), "admin");
+		orderService.changeStatus(id, OrderStatus.COMPLETED, orderService.getOrder(id).getVersion(), "admin");
+
+		editCustomer(s, id, "NEW", orderService.getOrder(id).getVersion()).andExpect(status().is4xxClientError())
+				.andExpect(jsonPath("$.message").exists());
+
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value("OLD"));
+	}
+
+	@Test
+	@DisplayName("[기준6] 취소 주문의 고객사 이름 수정은 거부되고 이름이 바뀌지 않는다")
+	void editCustomerNameOfCanceledOrderIsRejected() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, ",\"customerName\":\"OLD\"");
+		orderService.changeStatus(id, OrderStatus.CANCELED, orderService.getOrder(id).getVersion(), "admin");
+
+		editCustomer(s, id, "NEW", orderService.getOrder(id).getVersion()).andExpect(status().is4xxClientError())
+				.andExpect(jsonPath("$.message").exists());
+
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value("OLD"));
+	}
+
+	@Test
+	@DisplayName("[기준7] 오래된 주문 version(그 사이 다른 변경으로 올라감)으로 이름을 수정하면 409로 거부되고 이름이 바뀌지 않는다")
+	void editCustomerNameWithStaleVersionIsConflict() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, ",\"customerName\":\"OLD\"");
+		long stale = orderService.getOrder(id).getVersion();
+		orderService.changeStatus(id, OrderStatus.IN_PROGRESS, stale, "admin");
+
+		editCustomer(s, id, "NEW", stale).andExpect(status().isConflict());
+
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value("OLD"));
+	}
+
+	@Test
+	@DisplayName("[기준8] 존재하지 않는 주문의 이름 수정은 오류로 거부된다")
+	void editCustomerNameOfMissingOrderIsRejected() throws Exception {
+		editCustomer(login(), 999_999_999L, "NEW", 0).andExpect(status().is4xxClientError())
+				.andExpect(jsonPath("$.message").exists());
+	}
+
+	@Test
+	@DisplayName("[기준10] 상세 조회의 editable은 확정·진행이면 true이다")
+	void detailEditableIsTrueForConfirmedAndInProgress() throws Exception {
+		MockHttpSession s = login();
+		long id = confirm(s);
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.editable").value(true));
+
+		orderService.changeStatus(id, OrderStatus.IN_PROGRESS, orderService.getOrder(id).getVersion(), "admin");
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.editable").value(true));
+	}
+
+	@Test
+	@DisplayName("[기준10] 상세 조회의 editable은 완료·취소이면 false이다")
+	void detailEditableIsFalseForCompletedAndCanceled() throws Exception {
+		MockHttpSession s = login();
+		long done = confirm(s);
+		orderService.changeStatus(done, OrderStatus.IN_PROGRESS, orderService.getOrder(done).getVersion(), "admin");
+		orderService.changeStatus(done, OrderStatus.COMPLETED, orderService.getOrder(done).getVersion(), "admin");
+		long canceled = confirm(s);
+		orderService.changeStatus(canceled, OrderStatus.CANCELED, orderService.getOrder(canceled).getVersion(),
+				"admin");
+
+		mvc.perform(get("/api/orders/" + done).session(s)).andExpect(jsonPath("$.editable").value(false));
+		mvc.perform(get("/api/orders/" + canceled).session(s)).andExpect(jsonPath("$.editable").value(false));
+	}
+
+	@Test
+	@DisplayName("[기준12] 로그인하지 않고 이름 수정을 요청하면 401이다")
+	void editCustomerNameWithoutLoginIsUnauthorized() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, ",\"customerName\":\"OLD\"");
+		long version = orderService.getOrder(id).getVersion();
+
+		// 로그인 없이는 401, 같은 요청도 로그인하면 성공해야 401의 원인이 로그인 여부임을 확인한다
+		mvc.perform(post("/api/orders/" + id + "/customer").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"customerName\":\"NEW\",\"version\":" + version + "}"))
+				.andExpect(status().isUnauthorized());
+		editCustomer(s, id, "NEW", version).andExpect(status().isOk());
+	}
+
 	@Test
 	void confirmThenDetailAndStatusFlow() throws Exception {
 		MockHttpSession s = login();
@@ -165,7 +398,7 @@ class OrderFlowTests {
 		var inProgress = orderService.getOrder(id);
 		assertThat(inProgress.getStatus()).isEqualTo(OrderStatus.IN_PROGRESS);
 
-		// 오래된 version 으로 바꾸려 하면 충돌
+		// 오래된 주문 version 으로 바꾸려 하면 충돌
 		assertThatThrownBy(() -> orderService.changeStatus(id, OrderStatus.COMPLETED, order.getVersion(), "admin"))
 				.isInstanceOf(BusinessException.class).hasMessageContaining("먼저");
 
