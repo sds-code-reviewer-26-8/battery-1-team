@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TASK-001 · Controller/Service/Repository 업무별 분리 — 구현 전 체크</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#1b2333;--muted:#667189;--line:#e2e7f1;--accent:#2f5bea;
+--ok:#0f7a58;--ok-bg:#e1f5ec;--warn:#9a5208;--warn-bg:#fdefd8;--bad:#b3212f;--bad-bg:#fde7ea;--info-bg:#e9efff;
+--shadow:0 1px 2px rgba(20,30,60,.06),0 10px 28px rgba(20,30,60,.07)}
+@media (prefers-color-scheme:dark){:root{--bg:#0e131f;--card:#161d2d;--ink:#e7ebf4;--muted:#93a0ba;--line:#26304a;--accent:#8aa8ff;
+--ok:#63d6a9;--ok-bg:#12342b;--warn:#f1b660;--warn-bg:#3a2b13;--bad:#ff8c9a;--bad-bg:#3e1b22;--info-bg:#1c2745;--shadow:none}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "맑은 고딕","Segoe UI",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:32px 20px 72px}
+.hero{background:linear-gradient(135deg,#1f2b63 0%,#2f5bea 62%,#5f93f2 100%);color:#fff;border-radius:22px;padding:30px 32px;box-shadow:var(--shadow)}
+.hero .meta{font-size:13px;opacity:.85;letter-spacing:.02em}
+.hero h1{margin:8px 0 16px;font-size:27px;line-height:1.3;font-weight:800}
+.hero .verdict{margin:14px 0 0;font-size:15px;opacity:.95}
+.badge{display:inline-flex;align-items:center;gap:7px;font-weight:800;font-size:13px;padding:6px 14px;border-radius:999px;background:#fff}
+.badge.ready{color:#0f7a58}.badge.hilp{color:#9a5208}
+.badge .dot{width:9px;height:9px;border-radius:50%;background:currentColor}
+h2{margin:34px 0 14px;font-size:18px;display:flex;align-items:center;gap:10px}
+h2 .no{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:800}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.quote{border-left:4px solid var(--accent);background:var(--info-bg);padding:14px 18px;border-radius:0 12px 12px 0;white-space:pre-wrap}
+.lbl{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.chip{display:inline-block;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.bad{background:var(--bad-bg);color:var(--bad)}.chip.low{background:var(--info-bg);color:var(--accent)}.chip.skip{background:var(--line);color:var(--muted)}
+.card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.card p{margin:6px 0}
+.src{font-size:13px;color:var(--muted)}
+.chip.type{background:rgba(255,255,255,.2);color:#fff;margin-left:8px;font-size:12px;padding:5px 12px}
+.stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat>div{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.stat b{display:block;font-size:13px;margin-bottom:6px}
+.stat p{margin:6px 0 0;font-size:13px;color:var(--muted);line-height:1.5}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:6px 0 14px}
+.tile{text-align:center;padding:14px 10px;border:1px solid var(--line);border-radius:12px}
+.tile b{display:block;font-size:28px;line-height:1.1}.tile span{font-size:12px;color:var(--muted);font-weight:700}
+.tile.okt b{color:var(--ok)}.tile.badt b{color:var(--bad)}
+.meter{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0 4px}
+.meter span{height:10px;border-radius:6px;background:var(--line)}
+.meter span.on{background:var(--accent)}.meter.hot span.on{background:#e0662d}
+.meter-l{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:12px;color:var(--muted);text-align:center}
+.meter-l .on{color:var(--ink);font-weight:800}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;color:var(--muted);letter-spacing:.04em;padding:10px 12px;border-bottom:2px solid var(--line)}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.alert{border-radius:16px;padding:18px 22px;border:1px solid}
+.alert.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--ink)}
+.alert h3{margin:0 0 6px;color:var(--warn);font-size:16px}
+.alert ol{margin:10px 0 0;padding-left:22px}
+.check{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start}
+.check .n{width:44px;height:44px;border-radius:14px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:20px;font-weight:800}
+.check h3{margin:0 0 6px;font-size:16px}
+.kv{display:grid;grid-template-columns:84px 1fr;gap:4px 12px;font-size:14px}
+.kv.wide{grid-template-columns:112px 1fr;gap:8px 14px}
+.kv dt{color:var(--muted);font-weight:700}.kv dd{margin:0}
+.stack{display:grid;gap:14px}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 18px;margin-top:12px}
+summary{cursor:pointer;font-weight:700}
+code{font-family:Consolas,"D2Coding",monospace;font-size:13px;background:var(--info-bg);padding:1px 6px;border-radius:6px}
+footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}.stat{grid-template-columns:1fr 1fr}.hero h1{font-size:22px}}
+@media print{body{background:#fff}.card,details{box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="meta">TASK-001 · 권웅기 · 2026-10-22 11:07 · 시도 1/3</div>
+    <h1>Controller · Service · Repository 를 업무 종류별 파일로 분리</h1>
+    <span class="badge ready"><span class="dot"></span>READY · 구현으로 진행</span><span class="chip type">리팩터링</span>
+    <p class="verdict">배경과 목적을 이해했고, 변경 규모는 보통(약 8~10개 파일, 한 영역)입니다. 외부 동작은 그대로 두며, baseline 은 JUnit 22건·E2E 45건 모두 성공입니다.</p>
+  </header>
+
+  <h2><span class="no">1</span>점검 상태</h2>
+  <div class="stat">
+    <div><b>이해 점검</b><span class="chip ok">정상</span><p>배경·목적 모두 이해함</p></div>
+    <div><b>저장소 상태</b><span class="chip warn">주의</span><p>작업 트리 깨끗함, 단 기능 브랜치가 main 과 같은 지점</p></div>
+    <div><b>원격 동기화</b><span class="chip ok">정상</span><p>origin/main 과 앞 0 / 뒤 0</p></div>
+    <div><b>baseline 테스트</b><span class="chip ok">정상</span><p>67건 중 67건 성공</p></div>
+    <div><b>영향도 분석</b><span class="chip ok">정상</span><p>높음 0건 · 직접 수정 파일 약 8개</p></div>
+    <div><b>유형별 점검</b><span class="chip warn">주의</span><p>E2E·통합 테스트가 보호하나 단위 테스트는 없음</p></div>
+  </div>
+
+  <h2><span class="no">2</span>요청 원문</h2>
+  <div class="quote">Controller,Service,Repository가 현재 하나의 클래스로만 작성되어있는데, 하나의 파일에 너무 많은 내용이 들어가지 않도록 업무 종류별로 파일을 분리하는 refactoring을 진행해줘</div>
+
+  <h2><span class="no">3</span>이해 점검</h2>
+  <div class="grid2">
+    <section class="card">
+      <div class="top"><span class="lbl">배경 · 어떤 상황인가</span><span class="chip ok">이해함</span></div>
+      <p>Controller 는 <code>AppController</code>(198줄) 한 클래스에 로그인·주문·마스터·API 매핑이 모두 있고, Service 는 <code>BatteryService</code>(303줄)에 마스터 관리·시뮬레이션·주문 확정·상태 변경이 섞여 있습니다. Repository 는 <code>MasterRepositories</code>, <code>OrderRepositories</code> 라는 final 컨테이너 클래스 안에 인터페이스가 중첩되어 있습니다.</p>
+      <p class="src">근거: AppController.java 매핑 목록(52~182줄), BatteryService.java 메서드 목록, repository/*.java</p>
+    </section>
+    <section class="card">
+      <div class="top"><span class="lbl">목적 · 왜 필요한가</span><span class="chip ok">이해함</span></div>
+      <p>한 파일이 커지는 것을 막아 가독성·유지보수성을 높이려는 것입니다. 화면·API·계산 결과는 그대로이며, 성공은 기존 테스트가 그대로 통과하고 파일이 업무별로 나뉘었는지로 판단합니다.</p>
+      <p class="src">근거: 요청 문장 · 보유 테스트(JUnit, Playwright E2E)</p>
+    </section>
+  </div>
+
+  <h2><span class="no">4</span>저장소 · 원격 동기화</h2>
+  <section class="card">
+    <dl class="kv wide">
+      <dt>현재 브랜치</dt><dd><span class="chip low">feature/backend-refactoring-practice</span></dd>
+      <dt>base 브랜치</dt><dd><span class="chip low">main</span> <span class="src">origin/HEAD 기준 · base 보다 앞 0 / 뒤 0</span></dd>
+      <dt>작업 트리</dt><dd><span class="chip ok">작업 트리 깨끗함</span></dd>
+      <dt>원격 동기화</dt><dd><span class="chip ok">up-to-date</span> upstream 이 없어 origin/main 과 비교: 앞 0 / 뒤 0</dd>
+      <dt>처리 내용</dt><dd>git fetch origin --prune 실행. 원격에 새 커밋이 없어 pull 하지 않았습니다. 현재 브랜치의 원격 추적 브랜치는 없습니다(아직 push 되지 않음).</dd>
+      <dt>실행한 명령</dt><dd><code>git remote -v</code> <code>git fetch origin --prune</code> <code>git rev-list --left-right --count origin/main...HEAD</code></dd>
+    </dl>
+  </section>
+
+  <h2><span class="no">5</span>baseline 테스트 <span class="chip ok">67건 중 67건 성공</span></h2>
+  <section class="card">
+    <div class="tiles">
+      <div class="tile"><b>67</b><span>전체</span></div>
+      <div class="tile okt"><b>67</b><span>성공</span></div>
+      <div class="tile"><b>0</b><span>실패</span></div>
+    </div>
+    <table>
+      <thead><tr><th>스위트</th><th>실행 명령</th><th class="n">전체</th><th class="n">성공</th><th>결과</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>JUnit</td><td><code>./gradlew.bat test --rerun-tasks</code></td><td class="n">22</td><td class="n">22</td><td><span class="chip ok">통과</span></td><td>DemoApplicationTests 1 · OrderFlowTests 9 · PlannerTest 12</td></tr>
+        <tr><td>E2E (Playwright)</td><td><code>npm ci; npm test</code></td><td class="n">45</td><td class="n">45</td><td><span class="chip ok">통과</span></td><td>전용 인메모리 DB · 8091</td></tr>
+      </tbody>
+    </table>
+    <p class="src" style="margin-top:10px">구현 전부터 실패하던 테스트: 없음</p>
+  </section>
+
+  <h2><span class="no">6</span>변경 규모와 영향도</h2>
+  <section class="card">
+    <div class="top"><span class="lbl">변경 규모</span><span class="chip low">보통</span></div>
+    <div class="meter"><span class="on"></span><span class="on"></span><span></span><span></span></div>
+    <div class="meter-l"><span>작음</span><span class="on">보통</span><span>큼</span><span>매우 큼</span></div>
+    <p class="src" style="margin-top:12px">기존 4개 파일 수정·삭제와 신규 파일 다수(약 8~10개) · 백엔드 한 영역 · DB 스키마 변경 없음</p>
+  </section>
+  <section class="card" style="margin-top:14px">
+    <div class="top"><span class="lbl">영향도 분석</span></div>
+    <p>패키지·클래스 구조만 바뀝니다. 참조하는 곳은 DataInitializer 와 OrderFlowTests 이며, URL·템플릿·DB 는 그대로여야 합니다.</p>
+    <table>
+      <thead><tr><th style="width:96px">종류</th><th>대상</th><th>영향</th><th style="width:72px">수준</th></tr></thead>
+      <tbody>
+        <tr><td>직접 수정</td><td><code>AppController.java</code></td><td>로그인·주문·마스터·API 단위의 여러 컨트롤러로 분리. 공통 loginUser 모델 속성은 @ControllerAdvice 등으로 유지해야 함</td><td><span class="chip warn">중간</span></td></tr>
+        <tr><td>직접 수정</td><td><code>BatteryService.java</code></td><td>마스터 / 시뮬레이션 / 주문 서비스로 분리. @Transactional 경계와 SimulationResult record 위치 유지 필요</td><td><span class="chip warn">중간</span></td></tr>
+        <tr><td>직접 수정</td><td><code>MasterRepositories.java</code>, <code>OrderRepositories.java</code></td><td>중첩 인터페이스를 각각 독립 파일로 분리</td><td><span class="chip low">낮음</span></td></tr>
+        <tr><td>호출·참조</td><td><code>DataInitializer.java</code></td><td>BatteryService.initDefaults 호출 등 새 서비스로 import 갱신 필요</td><td><span class="chip low">낮음</span></td></tr>
+        <tr><td>테스트</td><td><code>OrderFlowTests.java</code></td><td>BatteryService·Repository 를 직접 참조하여 import 가 깨질 수 있음. 기대값은 바꾸지 않고 참조만 맞춰야 하는지 구현 시 판단</td><td><span class="chip warn">중간</span></td></tr>
+        <tr><td>화면·API</td><td>/login, /orders*, /master, /api/*</td><td>URL·응답은 불변이어야 함. E2E 45건이 보호</td><td><span class="chip low">낮음</span></td></tr>
+        <tr><td>데이터</td><td>JPA 엔티티·테이블</td><td>변경 없음</td><td><span class="chip low">낮음</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card" style="margin-top:14px">
+    <div class="top"><span class="lbl">위험</span></div>
+    <table>
+      <thead><tr><th style="width:90px">심각도</th><th>위험</th><th style="width:96px">사용자 인지</th><th>대응</th></tr></thead>
+      <tbody>
+        <tr><td><span class="chip warn">중간</span></td><td>분리 중 @Transactional 경계, 빈 주입, 공통 @ModelAttribute 가 누락되면 동작이 바뀔 수 있음</td><td>알고 있음</td><td>baseline 과 같은 결과 확인, E2E 로 화면 검증</td></tr>
+        <tr><td><span class="chip low">낮음</span></td><td>서비스·컨트롤러 단위 테스트가 없어 세부 회귀는 통합·E2E 에 의존</td><td>모름</td><td>구현 후 보고에 명시</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <h2><span class="no">7</span>유형별 점검 <span class="chip low">리팩터링</span></h2>
+  <section class="card">
+    <p>외부 동작을 바꾸지 않고 파일 구조만 개선하므로 리팩터링으로 판단했습니다. 기능 추가·동작 변경은 이번에 하지 않습니다.</p>
+    <table>
+      <thead><tr><th style="width:170px">점검 항목</th><th style="width:72px">상태</th><th>근거</th></tr></thead>
+      <tbody>
+        <tr><td>보호할 동작</td><td><span class="chip ok">정상</span></td><td>모든 URL·HTTP 응답·리다이렉트, 주문 확정·상태 변경·마스터 저장 결과, 화면 문구</td></tr>
+        <tr><td>변경 영역을 덮는 기존 테스트</td><td><span class="chip warn">주의</span></td><td>OrderFlowTests 9건과 E2E 45건이 주문·마스터·로그인을 덮음. 컨트롤러·서비스 직접 단위 테스트는 없음</td></tr>
+        <tr><td>동작 변경 없음</td><td><span class="chip ok">정상</span></td><td>요청에 기능 추가가 섞여 있지 않음</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <h2><span class="no">8</span>구현 후 체크리스트 <span class="chip low">3개</span></h2>
+  <div class="stack">
+    <section class="card check"><div class="n">1</div><div>
+      <h3>baseline 과 같은 테스트 결과</h3>
+      <dl class="kv"><dt>확인 방법</dt><dd><code>./gradlew.bat test --rerun-tasks</code> 후 <code>npm test</code> 실행</dd><dt>합격 기준</dt><dd>JUnit 22건 중 22건, E2E 45건 중 45건 성공. 기존 테스트의 기대값 수정·삭제 없음(import 갱신 제외)</dd></dl></div></section>
+    <section class="card check"><div class="n">2</div><div>
+      <h3>외부 동작 불변</h3>
+      <dl class="kv"><dt>확인 방법</dt><dd><code>git diff main -- src/main/resources/templates src/test/e2e</code> 실행</dd><dt>합격 기준</dt><dd>출력이 비어 있음(템플릿·E2E 변경 없음). 매핑 주소 집합은 구현 전후 동일</dd></dl></div></section>
+    <section class="card check"><div class="n">3</div><div>
+      <h3>업무별 파일 분리 달성</h3>
+      <dl class="kv"><dt>확인 방법</dt><dd><code>wc -l</code> 로 controller·service·repository 아래 파일 줄 수 확인</dd><dt>합격 기준</dt><dd>controller 와 service 패키지에 각각 업무별 파일이 2개 이상이고, 단일 파일은 150줄 이하이며 repository 인터페이스는 중첩 없이 독립 파일. docs/evidence/ 는 제외</dd></dl></div></section>
+  </div>
+
+  <details>
+    <summary>확인한 근거 (읽은 파일 · 실행한 명령)</summary>
+    <ul>
+      <li>AppController.java 의 앞부분과 매핑 목록, BatteryService.java 의 메서드 목록, repository/*.java 전체 — 일부만 읽음</li>
+      <li>docs/PRD.md, docs/INTENT.md — 읽지 않음(구조 개선이라 요구사항 문서는 근거로 쓰지 않음)</li>
+      <li><code>git branch --show-current</code>, <code>git status --short</code>, <code>git fetch origin --prune</code></li>
+      <li><code>./gradlew.bat test --rerun-tasks</code>, <code>npm ci</code>, <code>npm test</code></li>
+    </ul>
+  </details>
+
+  <footer>precheck · TASK-001 · 구현 전 체크 증거</footer>
+</div>
+</body>
+</html>
