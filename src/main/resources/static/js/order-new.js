@@ -14,6 +14,10 @@
 	let result = null;                 // 마지막 시뮬레이션 결과
 	let selected = 'COST';
 	let anim = null;
+	const asap = document.getElementById('asap');
+	const dueWrap = document.getElementById('dueWrap');
+	const dueInput = document.getElementById('dueDays');
+	const dueError = document.getElementById('dueError');
 
 	// ---- 게이지
 
@@ -90,6 +94,51 @@
 		resultEl.hidden = true;
 		inputError.hidden = true;
 	}
+
+	// ---- 납기일 (화면에서만 쓰며 저장하지 않는다)
+
+	/** 적용할 납기일(일). 체크가 꺼져 있거나 5~50 범위를 벗어나면 null */
+	function dueLimit() {
+		if (!asap.checked) return null;
+		const v = Number(dueInput.value);
+		return Number.isInteger(v) && v >= 5 && v <= 50 ? v : null;
+	}
+
+	/** 이미 그려진 결과에 납기 초과 표시만 다시 입힌다(시뮬레이션·애니메이션은 그대로) */
+	function applyDue() {
+		const limit = dueLimit();
+		if (asap.checked && limit === null) {
+			showError(dueError, '납기일은 5일 이상 50일 이하의 정수로 입력하세요.');
+		} else {
+			dueError.hidden = true;
+		}
+		if (!result) return;
+		optionsEl.querySelectorAll('.option').forEach(b => {
+			const o = result.options.find(x => x.type === b.dataset.type);
+			const over = limit !== null && o.totalDays > limit;
+			b.classList.toggle('over-due', over);
+			const note = b.querySelector('.due-note');
+			if (note) note.remove();
+			if (over) {
+				const span = document.createElement('span');
+				span.className = 'due-note';
+				span.textContent = `납기 ${o.totalDays - limit}일 초과`;
+				b.appendChild(span);
+			}
+		});
+		const plan = result.options.find(o => o.type === selected);
+		document.querySelectorAll('#summary .stats b').forEach(b => {
+			if (b.previousElementSibling && b.previousElementSibling.textContent === '소요 일수') {
+				b.classList.toggle('over-due', limit !== null && plan.totalDays > limit);
+			}
+		});
+	}
+
+	asap.addEventListener('change', () => {
+		dueWrap.hidden = !asap.checked;
+		applyDue();
+	});
+	dueInput.addEventListener('input', applyDue);
 
 	// ---- 시뮬레이션
 
