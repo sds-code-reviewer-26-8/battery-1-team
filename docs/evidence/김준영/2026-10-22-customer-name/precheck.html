@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>prepare 리포트</title>
+<style>
+:root{--bg:#fff;--fg:#1c1c1e;--muted:#6b6b70;--line:#d9d9de;--head:#f3f3f6;--green:#1a7f37;--yellow:#9a6700;--red:#cf222e;--pending:#6b6b70}
+@media (prefers-color-scheme:dark){:root{--bg:#16161a;--fg:#ececf0;--muted:#a0a0a8;--line:#3a3a42;--head:#202026;--green:#4ac26b;--yellow:#e3b341;--red:#ff7b72;--pending:#a0a0a8}}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 system-ui,sans-serif;max-width:860px;margin:32px auto;padding:0 16px}
+h1{margin:0 0 4px}h2{margin-top:32px;border-bottom:1px solid var(--line);padding-bottom:6px}h3{margin:20px 0 6px;font-size:15px}
+table{border-collapse:collapse;width:100%;margin:6px 0}th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+th{background:var(--head)}.kv th{width:130px}pre{margin:0;white-space:pre-wrap}code{font-size:13px}.muted{color:var(--muted)}
+.light{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:14px;vertical-align:middle}
+.light i{width:12px;height:12px;border-radius:50%;background:currentColor;display:inline-block}
+.GREEN{color:var(--green)}.YELLOW{color:var(--yellow)}.RED{color:var(--red)}.PENDING{color:var(--pending)}
+.overall{font-size:20px;margin:8px 0 0}
+</style></head><body>
+<h1>prepare 리포트</h1>
+<p class="overall">종합 <span class="light YELLOW"><i></i>YELLOW</span><span class="muted"></span></p>
+<p class="muted">신호등: RED = 중단·차단 사유 있음, YELLOW = 진행 가능하지만 확인할 것이 남음, GREEN = 남은 것 없음</p>
+<h2>① 환경 점검 <span class="light GREEN"><i></i>GREEN</span></h2><p>환경 점검 통과, 작업 전 기존 실패 없음</p><table class="kv"><tr><th>상태</th><td><b>ok</b></td></tr><tr><th>현재 브랜치</th><td><code>main</code></td></tr><tr><th>base</th><td><code>origin/main</code></td></tr><tr><th>원격 동기화</th><td>up-to-date (40b08551 → 40b08551, origin 40b08551)</td></tr><tr><th>작업 전 테스트(기존 실패 확인)</th><td>24건 중 실패 0건</td></tr></table>
+<h2>② 영향도 분석 <span class="light YELLOW"><i></i>YELLOW</span></h2><p>기존 주문 확정 서비스 시그니처가 바뀌어 기존 테스트 호출부 확인이 필요하고, 가정 몇 건이 미확인</p><h3>이미 구현된 것</h3><p class='muted'>없음</p><h3>영향받는 파일</h3><table><thead><tr><th>경로</th><th>이유</th></tr></thead><tbody><tr><td><code>src/main/java/com/example/demo/entity/Order.java</code></td><td>customerName 필드와 수정 메서드 추가</td></tr><tr><td><code>src/main/java/com/example/demo/service/OrderService.java</code></td><td>확정 시 고객사 저장, 이름 수정 서비스 추가</td></tr><tr><td><code>src/main/java/com/example/demo/controller/OrderController.java</code></td><td>요청·응답 레코드 확장, 이름 수정 API</td></tr><tr><td><code>src/main/resources/static/pages/order-new.html</code></td><td>고객사 입력란</td></tr><tr><td><code>src/main/resources/static/pages/order-detail.html</code></td><td>이름 수정 폼</td></tr><tr><td><code>src/main/resources/static/pages/orders.html</code></td><td>목록에 고객사 열</td></tr><tr><td><code>src/main/resources/static/js/order-new.js</code></td><td>확정 요청에 customerName 전송</td></tr><tr><td><code>src/main/resources/static/js/order-detail.js</code></td><td>고객사 표시, 수정 호출, 수정 불가 시 폼 숨김</td></tr><tr><td><code>src/main/resources/static/js/orders.js</code></td><td>목록 고객사 표시</td></tr></tbody></table><h3>관련 기존 테스트</h3><table><thead><tr><th>테스트</th><th>이유</th><th>작업 전 상태</th></tr></thead><tbody><tr><td><code>com.example.demo.OrderFlowTests</code></td><td>확정·상태 변경 흐름 회귀 확인 및 신규 기준 추가</td><td>통과</td></tr></tbody></table><h3>충돌 위험이 있는 핵심 규칙</h3><table><thead><tr><th>규칙</th><th>이유</th></tr></thead><tbody><tr><td>낙관적 락(@Version)으로 동시 변경을 막는다</td><td>이름 수정이 version을 올려 화면의 상태 변경 version과 충돌할 수 있음</td></tr><tr><td>주문 상태 전이: 완료·취소 이후 변경 불가</td><td>이름 수정 경로가 상태 규칙을 우회하면 안 됨</td></tr></tbody></table><h3>위험과 대응</h3><table><thead><tr><th>ID</th><th>위험</th><th>대응</th></tr></thead><tbody><tr><td>위험1</td><td>OrderService.confirm 시그니처 변경으로 기존 호출부가 깨질 수 있음</td><td>호출부(OrderController, 테스트)를 함께 수정하고 verify로 확인</td></tr><tr><td>위험2</td><td>이름 수정 이력 기록 여부 등 미확인 가정</td><td>spec 가정에 이력 미기록, 선택 입력, 입력값 무검증 저장을 명시</td></tr><tr><td>위험3</td><td>화면만 막고 서버에서 완료·취소 수정을 허용할 수 있음</td><td>기준7, 8로 서버 거부를 테스트</td></tr></tbody></table>
+</body></html>
