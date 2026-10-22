@@ -23,7 +23,7 @@ flowchart TD
 | 1 | `prepare` | 배경·목적을 이해했는지 확인하고, 사전 점검 보고서와 Plan(체크리스트)을 만든다 |
 | 2 | `implement` | prepare가 이해한 내용과 Plan대로 구현하고, 자가검증 후 PRD 문서를 갱신한다 |
 | 3 | `test` | 체크리스트와 보유한 모든 테스트를 확인하고, 새 기능의 Unit Test를 만든다 |
-| 4 | `refactoring` | 개선 제안 3가지를 점검하고 1가지만 리팩토링한 뒤 보고서를 이어 쓴다 |
+| 4 | `refactoring` | 개선 제안 3가지를 점검해 보고서에 적는다 (코드는 수정하지 않는다) |
 
 ## 사용법
 
@@ -38,11 +38,12 @@ flowchart TD
 ## 단계별 설명
 
 ### 1. prepare — 구현 전에 멈출지 판단한다
-구현하지 않고 **이해 확인 → 사전 점검 → 위험 판단 → 보고서 → Plan** 순서로 진행합니다.
+구현하지 않고 **이해 확인 → 사전 점검 → 위험 판단 → 보고서(영향도 분석 포함) → Plan** 순서로 진행합니다.
 
 - **이해 확인:** 사용자의 **배경**(어떤 상황인가)과 **목적**(왜 필요한가)을 이해했는지 확인합니다. 둘 중 하나라도 확신이 서지 않으면 추측하지 않고 `HILP`를 반환합니다.
 - **사전 점검:** 현재 브랜치, base, 원격 동기화, baseline 테스트(구현 전 상태), `docs/understand/김도현/prd_implement.md`와 요청이 달라지는 부분을 확인합니다.
 - **위험 판단:** 너무 큰 변경이거나 심각도 높은 Risk가 있는데 사용자가 모르는 것 같으면 경고하면서 `HILP`를 반환합니다.
+- **영향도 분석:** 보고서에 직접·간접 영향, 영역별(화면·서비스·계산 로직·DB·테스트) 영향도, 영향받을 기존 테스트, INTENT 확인, 종합 등급(낮음·중간·높음)을 적습니다. 코드를 읽고 검색한 결과이며 추정은 "추정"으로 표시합니다.
 - **산출물:** `docs/evidence/김도현/TASK-NNN-prepare/precheck.html` (짧은 사전 점검 보고서, NNN은 아래 "TASK 번호 규칙" 참고)
 - **Plan:** 목표, 변경 대상, 단계, 하지 않을 것, 위험, **검증 체크리스트**. 체크리스트는 test가 항목별로 PASS/FAIL을 판정하므로 확인 가능한 한 문장으로 씁니다.
 - 소스 코드는 수정하지 않습니다. 쓰는 파일은 보고서 하나뿐입니다.
@@ -58,15 +59,15 @@ flowchart TD
 - 보유한 **Regression · Unit · E2E 테스트를 모두** 실행합니다.
 - 새 기능에 대한 **Unit Test를 만들어** 실행하고, 기능이 의도적으로 바뀌어 기존 테스트가 달라져야 하면 테스트를 만들거나 고쳐서 실행합니다.
 - **프로덕션 코드는 수정하지 않습니다.** 결함은 고치지 않고 FAIL로 보고합니다.
-- **PASS**이면 `docs/evidence/김도현/TASK-NNN/report.html`에 테스트 결과와 **추가·변경된 테스트**를 짧게 정리합니다.
+- **PASS**이면 `docs/evidence/김도현/TASK-NNN/report.html`을 씁니다. 보고서는 `.claude/templates/report-template.html` 양식을 따르며, 템플릿은 그대로 두고 JSON 데이터만 채웁니다. 내용은 **영역 판정(Green·Yellow·Red)**, 테스트 결과(체크리스트, Regression·Unit·E2E 건수, **추가·변경된 테스트**), 결론입니다.
+- **영역 판정:** 팀 기준으로 정합니다. Green은 테스트가 충분하고 위험이 낮은 영역, Yellow는 품질이 고르지 않거나 기존 테스트를 완전히 믿기 어려운 영역, Red는 인증·결제·권한·급여 등 민감하거나 도메인 지식이 필요한 영역입니다. 두 영역에 걸치면 높은 쪽으로 판정합니다.
 - FAIL이면 문제별 `kind`, 실패 근거, 해결 힌트를 담아 prepare로 돌아갑니다.
 
-### 4. refactoring — 개선 3가지를 점검하고 1가지만 수행한다
-- 이번 변경 범위 안에서 개선이 필요한 부분을 찾아 **제안 3가지**를 점검(효과·위험·검증 가능성)합니다.
-- 그중 **1가지만** 골라 리팩토링하고, **동작은 바꾸지 않습니다.**
-- 리팩토링 후 테스트를 다시 실행해 동작이 그대로인지 확인합니다.
-- 문제가 없으면 test가 쓴 같은 `report.html` **뒤에 이어서** 개선 사항 목록과 수행한 방향을 적고 `DONE`을 반환합니다. (Loop 종료)
-- 문제가 생기면 자기 변경만 되돌리고 `FAIL`로 prepare로 돌아갑니다.
+### 4. refactoring — 개선 3가지를 점검하고 제안만 한다
+- 이번 변경 범위를 중심으로 개선이 필요한 부분을 찾아 **제안 3가지**를 점검(효과·위험·검증 가능성)합니다.
+- **코드는 수정하지 않습니다.** 리팩토링을 실제로 수행하지 않고 제안만 하므로 `selected`는 항상 비어 있습니다.
+- test가 쓴 같은 `report.html`의 JSON에 `refactoring` 키(요약, 제안 목록, 점검한 파일)를 **추가**합니다. 기존 값은 바꾸지 않으며, 템플릿이 "리팩토링 제안 (코드 수정 없음)" 카드로 보여 줍니다. 이어 쓴 뒤 `DONE`을 반환합니다. (Loop 종료)
+- 점검 중 **리팩토링으로는 해결할 수 없는 결함**(요구사항과 어긋난 동작 등)을 발견하면 `FAIL`로 prepare로 돌아갑니다.
 
 ## Loop 규칙
 
@@ -101,8 +102,8 @@ prepare가 `HILP`를 반환하는 경우는 세 가지입니다.
 요청 스펙에 더해 아래를 정해 구현했습니다.
 - **최대 3회:** prepare로 돌아갈 수 있는 횟수의 상한입니다. 무한 루프를 막으려고 두었습니다 (`im.js`의 `MAX_ROUNDS`).
 - **`BLOCKED`:** 앱을 띄울 수 없거나 설정 파일이 없어 E2E를 못 돌리면 PASS도 FAIL도 판단할 수 없으므로, prepare로 돌아가지 않고 사람에게 넘기고 종료합니다.
-- **refactoring 개선 사항이 3개 미만이면** 억지로 채우지 않고 찾은 만큼만 적으며, 개선할 부분이 없으면 수행 없이 `DONE`입니다.
-- **refactoring 실패 시 되돌리기**는 `git checkout` 대신 **자기 변경만** 되돌립니다. implement의 미커밋 변경이 같이 사라지지 않게 하려는 것입니다.
+- **refactoring 제안이 3개 미만이면** 억지로 채우지 않고 찾은 만큼만 적으며, 개선할 부분이 없으면 제안 없이 `DONE`입니다.
+- **refactoring은 코드를 고치지 않습니다.** 제안만 하므로 되돌릴 변경이 없고, 테스트도 다시 실행하지 않아도 됩니다.
 
 ## 단계 사이의 약속 (반환 값)
 각 에이전트는 아래 형식으로 결과를 돌려줍니다. 필드 이름은 워크플로우가 읽으므로 바꾸지 않습니다.
@@ -112,7 +113,7 @@ prepare가 `HILP`를 반환하는 경우는 세 가지입니다.
 | prepare | `READY` / `HILP` | `task_id`, `understanding`, `hilp`, `precheck`, `plan` |
 | implement | `completed` true/false | `changed_files`, `deviations`, `self_check`, `prd_update` |
 | test | `PASS` / `FAIL` / `BLOCKED` | `checklist`, `executed`, `tests_added`, `tests_modified`, `failures`, `report_path` |
-| refactoring | `DONE` / `FAIL` | `proposals`, `selected`, `verification`, `issues`, `report_path` |
+| refactoring | `DONE` / `FAIL` | `proposals`(`selected`는 모두 false), `verification`, `issues`, `report_path` (`selected`는 항상 비움) |
 
 ## 산출물 위치
 | 파일 | 만드는 단계 |
@@ -121,7 +122,7 @@ prepare가 `HILP`를 반환하는 경우는 세 가지입니다.
 | `docs/understand/김도현/prd_implement.md` (갱신) | implement |
 | `docs/evidence/김도현/TASK-NNN/report.html` | test가 작성, refactoring이 이어서 작성 |
 
-report.html 템플릿은 나중에 바뀔 수 있어, refactoring은 특정 틀을 가정하지 않고 test가 쓴 파일의 모양을 보고 맞춰 이어 씁니다.
+`report.html`은 `.claude/templates/report-template.html`로 만듭니다. test가 템플릿을 복사해 `/*__TRIAGE_DATA__*/null` 자리에 보고서 JSON(`triage`, `verify` 등)을 넣고, refactoring은 그 JSON에 `refactoring` 키만 추가합니다. 템플릿의 HTML·CSS·스크립트는 고치지 않습니다. 템플릿은 `.claude/` 안에 있어 git에 추적되지 않습니다.
 
 ### TASK 번호 규칙
 보고서 경로는 **고정하지 않습니다.** 한 라운드가 시작될 때마다(`/im`을 새로 실행할 때, 또는 실패로 prepare로 돌아가 다시 시도할 때) 새 TASK 번호를 받아 그 폴더에 씁니다.
@@ -142,7 +143,7 @@ report.html 템플릿은 나중에 바뀔 수 있어, refactoring은 특정 틀�
 - **실행한 것과 추정한 것을 구분합니다.** 보고에는 "실행해서 확인 / 코드를 읽고 추정 / 확인하지 못함"을 나눠 적습니다.
 - **변경은 작게.** 요청 범위를 벗어난 정리, 이름 변경, 포맷 변경을 하지 않습니다. 팀 프로젝트의 공용 파일은 꼭 필요할 때만 건드립니다.
 - **커밋·푸시·PR 생성은 에이전트가 하지 않습니다.**
-- **역할을 섞지 않습니다.** prepare는 코드를 고치지 않고, test는 프로덕션 코드를 고치지 않고, refactoring은 동작을 바꾸지 않습니다.
+- **역할을 섞지 않습니다.** prepare는 코드를 고치지 않고, test는 프로덕션 코드를 고치지 않고, refactoring은 코드를 고치지 않습니다.
 
 ## 검증 현황과 한계
 - **확인한 것:** 워크플로우의 문법과 제어 흐름을 가짜 에이전트 응답으로 시험했습니다. 한 번에 완료, test 실패 후 복귀, refactoring 실패 후 복귀, HILP 종료, 최대 횟수 초과, BLOCKED 종료, implement 미완료, Plan 없는 READY 오류, 인자 없음의 9가지 경로가 의도대로 동작했고, 복귀할 때 실패 내용이 prepare에 전달되는 것도 확인했습니다.
