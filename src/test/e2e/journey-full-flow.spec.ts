@@ -21,7 +21,7 @@ test('JRN-01-TC01 로그인부터 완료까지 주문 한 건 처리', async ({ 
 	await page.locator('#runBtn').click();
 	await expect(page.locator('#result')).toBeVisible();
 	await expect(page.locator('#options .option')).toHaveCount(3);
-	await expect(page.locator('#options .option.selected')).toContainText('운항비 최소');
+	await expect(page.locator('#options .option.selected')).toContainText('총비용 최소');
 
 	// 4. 메모 입력 후 확정
 	await page.locator('#memo').fill('E2E 전체 여정');

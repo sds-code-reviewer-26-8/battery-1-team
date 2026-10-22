@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /**
- * 주문 수량으로부터 경로 3가지(운항비 최소 / 가장 빠르게 / 가까운 곳부터)를 계산한다.
+ * 주문 수량으로부터 경로 3가지(총비용 최소 / 가장 빠르게 / 가까운 곳부터)를 계산한다.
  *
  * <p>규칙 요약
  * <ul>
@@ -22,6 +22,7 @@ import java.util.TreeSet;
  * <li>한 나라의 방문 횟수는 올림(주문 / 재고 상한). 마지막 방문 전까지는 재고 상한만큼, 마지막은 나머지를 싣는다.</li>
  * <li>여러 번 수거할 때는 한국에 들러 내려놓고 다시 출항한다(왕복을 나눈다).</li>
  * <li>배는 재고가 채워지는 날에 맞춰 늦게 출항한다. 한국에서 대기는 무료.</li>
+ * <li>공장 운영일수는 0일부터 마지막 생산일까지(생산 도중 창고가 가득 차 기다리는 날 포함, 생산이 모두 끝난 뒤 배를 기다리는 날 제외). 주문이 없는 공장은 0.</li>
  * </ul>
  */
 public final class Planner {
@@ -60,12 +61,12 @@ public final class Planner {
 			List<List<Country>> groups = sortGroups(master, partition);
 			for (List<List<List<Country>>> shipTrips : tripStructures(master, groups, amounts)) {
 				Candidate cand = schedule(master, orders, amounts, shipTrips);
-				if (cost == null || cand.shipping < cost.shipping
-						|| (cand.shipping == cost.shipping && cand.totalDays < cost.totalDays)) {
+				if (cost == null || cand.variableCost() < cost.variableCost()
+						|| (cand.variableCost() == cost.variableCost() && cand.totalDays < cost.totalDays)) {
 					cost = cand;
 				}
 				if (fast == null || cand.totalDays < fast.totalDays
-						|| (cand.totalDays == fast.totalDays && cand.shipping < fast.shipping)) {
+						|| (cand.totalDays == fast.totalDays && cand.variableCost() < fast.variableCost())) {
 					fast = cand;
 				}
 			}
@@ -73,7 +74,7 @@ public final class Planner {
 		Candidate near = nearest(master, orders, amounts, active, maxShips);
 
 		return List.of(
-				toPlan(master, orders, COST, "운항비 최소", cost),
+				toPlan(master, orders, COST, "총비용 최소", cost),
 				toPlan(master, orders, FAST, "가장 빠르게", fast),
 				toPlan(master, orders, NEAR, "가까운 곳부터", near));
 	}
@@ -285,7 +286,14 @@ public final class Planner {
 
 	// ---------------------------------------------------------------- 일정 계산
 
-	private record Candidate(List<ShipPlan> ships, int totalDays, long shipping) {
+	/** operatingDays: 나라별 공장 운영일수, operating: 공장 운영비(원) */
+	private record Candidate(List<ShipPlan> ships, int totalDays, long shipping, Map<Country, Integer> operatingDays,
+			long operating) {
+
+		/** 생산비는 안마다 같으므로 안을 고르는 비용 기준은 운항비 + 운영비 */
+		long variableCost() {
+			return shipping + operating;
+		}
 	}
 
 	/**
@@ -340,7 +348,31 @@ public final class Planner {
 			totalDays = Math.max(totalDays, free);
 			shipping += (long) sail * master.shipDailyCostWon();
 		}
-		return new Candidate(ships, totalDays, shipping);
+		Map<Country, Integer> operatingDays = new EnumMap<>(Country.class);
+		long operating = 0;
+		for (Country c : Country.factories()) {
+			int q = orders.getOrDefault(c, 0);
+			int days = 0;
+			if (q > 0) {
+				int[] st = new int[totalDays + 1];
+				int[] pr = new int[Math.max(totalDays, 0)];
+				simulateFactory(master.factory(c), q, pickups(ships, c), st, pr);
+				days = operatingDays(pr);
+			}
+			operatingDays.put(c, days);
+			operating += days * master.factory(c).operatingDailyCostWon();
+		}
+		return new Candidate(ships, totalDays, shipping, operatingDays, operating);
+	}
+
+	/** 운영일수 = 마지막 생산일까지의 일수(0일부터). 생산 도중 쉬는 날은 포함, 생산이 끝난 뒤는 제외. */
+	private static int operatingDays(int[] production) {
+		for (int t = production.length - 1; t >= 0; t--) {
+			if (production[t] > 0) {
+				return t + 1;
+			}
+		}
+		return 0;
 	}
 
 	private static int ceilDiv(int a, int b) {
@@ -358,19 +390,19 @@ public final class Planner {
 			int[] st = new int[cand.totalDays + 1];
 			int[] pr = new int[Math.max(cand.totalDays, 0)];
 			if (q > 0) {
-				simulateFactory(master.factory(c), q, pickups(cand, c), st, pr);
+				simulateFactory(master.factory(c), q, pickups(cand.ships, c), st, pr);
 				productionCost += q * 1000L * master.factory(c).unitCost();
 			}
 			stock.put(c, st);
 			production.put(c, pr);
 		}
-		return new Plan(type, label, cand.totalDays, productionCost, cand.shipping, productionCost + cand.shipping,
-				cand.ships, stock, production);
+		return new Plan(type, label, cand.totalDays, productionCost, cand.shipping, cand.operating,
+				productionCost + cand.shipping + cand.operating, cand.operatingDays, cand.ships, stock, production);
 	}
 
-	private static Map<Integer, Integer> pickups(Candidate cand, Country c) {
+	private static Map<Integer, Integer> pickups(List<ShipPlan> ships, Country c) {
 		Map<Integer, Integer> result = new java.util.HashMap<>();
-		for (ShipPlan ship : cand.ships) {
+		for (ShipPlan ship : ships) {
 			for (Trip trip : ship.trips()) {
 				for (Stop s : trip.stops()) {
 					if (s.country() == c) {

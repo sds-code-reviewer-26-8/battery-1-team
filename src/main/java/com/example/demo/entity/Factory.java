@@ -27,11 +27,16 @@ public class Factory {
 	@Column(nullable = false)
 	private long unitCost;
 
+	/** 하루 운영비(원). 기본 10억 원 */
+	@Column(nullable = false, columnDefinition = "bigint default 1000000000")
+	private long operatingDailyCost = 1_000_000_000L;
+
 	protected Factory() {
 	}
 
-	public Factory(Country country, int maxDaily, int stockLimit, long unitCost) {
+	public Factory(Country country, int maxDaily, int stockLimit, long unitCost, long operatingDailyCost) {
 		this.country = country;
+		this.operatingDailyCost = operatingDailyCost;
 		this.maxDaily = maxDaily;
 		this.stockLimit = stockLimit;
 		this.unitCost = unitCost;
@@ -63,5 +68,13 @@ public class Factory {
 
 	public void setUnitCost(long unitCost) {
 		this.unitCost = unitCost;
+	}
+
+	public long getOperatingDailyCost() {
+		return operatingDailyCost;
+	}
+
+	public void setOperatingDailyCost(long operatingDailyCost) {
+		this.operatingDailyCost = operatingDailyCost;
 	}
 }

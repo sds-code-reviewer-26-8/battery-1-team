@@ -7,6 +7,7 @@ import com.example.demo.entity.Setting;
 import com.example.demo.repository.FactoryRepository;
 import com.example.demo.repository.RouteRepository;
 import com.example.demo.repository.SettingRepository;
+import com.example.demo.simulation.Master;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,10 +30,10 @@ public class MasterInitService {
 		if (settings.count() > 0) {
 			return;
 		}
-		factories.save(new Factory(Country.CHINA, 400, 4000, 700));
-		factories.save(new Factory(Country.JAPAN, 800, 2000, 900));
-		factories.save(new Factory(Country.VIETNAM, 200, 10000, 550));
-		factories.save(new Factory(Country.INDONESIA, 300, 7000, 450));
+		factories.save(new Factory(Country.CHINA, 400, 4000, 700, Master.DEFAULT_OPERATING_DAILY_COST_WON));
+		factories.save(new Factory(Country.JAPAN, 800, 2000, 900, Master.DEFAULT_OPERATING_DAILY_COST_WON));
+		factories.save(new Factory(Country.VIETNAM, 200, 10000, 550, Master.DEFAULT_OPERATING_DAILY_COST_WON));
+		factories.save(new Factory(Country.INDONESIA, 300, 7000, 450, Master.DEFAULT_OPERATING_DAILY_COST_WON));
 
 		routes.save(new Route(Country.KOREA, Country.CHINA, 1));
 		routes.save(new Route(Country.KOREA, Country.JAPAN, 2));

@@ -58,7 +58,7 @@ class PlannerTest {
 			plan.ships().forEach(s -> s.trips().forEach(t -> t.stops()
 					.forEach(st -> loaded.merge(st.country(), st.loadK(), Integer::sum))));
 			assertThat(loaded).as(plan.label()).isEqualTo(orders);
-			assertThat(plan.totalCost()).isEqualTo(plan.productionCost() + plan.shippingCost());
+			assertThat(plan.totalCost()).isEqualTo(plan.productionCost() + plan.shippingCost() + plan.operatingCost());
 		}
 	}
 
@@ -125,7 +125,8 @@ class PlannerTest {
 		Plan cost = plans.get(0);
 		Plan fast = plans.get(1);
 		Plan near = plans.get(2);
-		assertThat(cost.shippingCost()).isLessThanOrEqualTo(fast.shippingCost()).isLessThanOrEqualTo(near.shippingCost());
+		assertThat(cost.shippingCost() + cost.operatingCost()).isLessThanOrEqualTo(fast.shippingCost() + fast.operatingCost())
+				.isLessThanOrEqualTo(near.shippingCost() + near.operatingCost());
 		assertThat(fast.totalDays()).isLessThanOrEqualTo(cost.totalDays()).isLessThanOrEqualTo(near.totalDays());
 	}
 
@@ -152,6 +153,111 @@ class PlannerTest {
 					+ t.departDay() + " → " + t.stops().stream()
 							.map(st -> st.country().getLabel() + "(" + st.arriveDay() + "일," + st.loadK() + ")").toList()
 					+ " → 귀환 " + t.returnDay())));
+		}
+	}
+
+	// ---------------------------------------------------------------- 공장 운영비
+
+	private static final long OPERATING_DAILY = Master.DEFAULT_OPERATING_DAILY_COST_WON;
+
+	private static int lastProductionDay(Plan plan, Country c) {
+		int[] pr = plan.production().get(c);
+		for (int t = pr.length - 1; t >= 0; t--) {
+			if (pr[t] > 0) {
+				return t;
+			}
+		}
+		return -1;
+	}
+
+	@Test
+	void firstOptionIsLabeledTotalCostMinimum() {
+		List<Plan> plans = Planner.plan(master(3), orders(3000, 3000, 3000, 3000));
+		assertThat(plans.get(0).type()).isEqualTo(Planner.COST);
+		assertThat(plans.get(0).label()).isEqualTo("총비용 최소");
+		assertThat(plans.get(1).label()).isEqualTo("가장 빠르게");
+		assertThat(plans.get(2).label()).isEqualTo("가까운 곳부터");
+	}
+
+	@Test
+	void factoryWithoutOrderHasZeroOperatingDaysAndCost() {
+		// 중국 400K = 1일 생산. 배를 기다리는 날은 운영일수에 넣지 않는다 (총 2일 중 운영 1일)
+		Plan plan = Planner.plan(master(1), orders(400, 0, 0, 0)).get(0);
+		assertThat(plan.operatingDays().get(Country.CHINA)).isEqualTo(1);
+		assertThat(plan.operatingDays().get(Country.JAPAN)).isZero();
+		assertThat(plan.operatingDays().get(Country.VIETNAM)).isZero();
+		assertThat(plan.operatingDays().get(Country.INDONESIA)).isZero();
+		assertThat(plan.operatingCost()).isEqualTo(OPERATING_DAILY);
+		assertThat(plan.totalCost()).isEqualTo(400L * 1000 * 700 + 2 * 100_000_000L + OPERATING_DAILY);
+	}
+
+	@Test
+	void operatingDaysExcludeWaitingAfterProductionEnds() {
+		// 베트남 2000K / 200K일 = 10일 생산(0~9일). 15일차 귀환까지 걸리지만 운영일수는 10일
+		Plan plan = Planner.plan(master(1), orders(0, 0, 2000, 0)).get(0);
+		assertThat(plan.totalDays()).isEqualTo(15);
+		assertThat(plan.operatingDays().get(Country.VIETNAM)).isEqualTo(10);
+		assertThat(plan.operatingCost()).isEqualTo(10 * OPERATING_DAILY);
+	}
+
+	@Test
+	void operatingDaysIncludeWaitingWhileWarehouseIsFull() {
+		// 일본 4500K, 재고 상한 2000K: 상한에 닿아 쉬는 날이 생산 도중에 생긴다. 그 날은 운영일수에 포함
+		Plan plan = Planner.plan(master(1), orders(0, 4500, 0, 0)).get(0);
+		int[] pr = plan.production().get(Country.JAPAN);
+		int last = lastProductionDay(plan, Country.JAPAN);
+		boolean idleInside = false;
+		for (int t = 0; t < last; t++) {
+			idleInside |= pr[t] == 0;
+		}
+		assertThat(idleInside).as("생산 도중 창고가 가득 차 쉬는 날").isTrue();
+		assertThat(plan.operatingDays().get(Country.JAPAN)).isEqualTo(last + 1);
+		assertThat(plan.totalDays()).isGreaterThan(last + 1);
+		assertThat(plan.operatingCost()).isEqualTo((last + 1) * OPERATING_DAILY);
+	}
+
+	@Test
+	void totalCostIsProductionPlusShippingPlusOperating() {
+		for (Plan plan : Planner.plan(master(3), orders(3000, 1000, 0, 7000))) {
+			long operating = 0;
+			for (Country c : Country.factories()) {
+				operating += plan.operatingDays().get(c) * OPERATING_DAILY;
+			}
+			assertThat(plan.operatingCost()).as(plan.label()).isEqualTo(operating);
+			assertThat(plan.totalCost()).as(plan.label())
+					.isEqualTo(plan.productionCost() + plan.shippingCost() + operating);
+		}
+	}
+
+	@Test
+	void operatingCostUsesEachFactorysDailyCost() {
+		Master m = new Master(1, 1, 100_000_000L,
+				List.of(new FactoryParam(Country.CHINA, 400, 4000, 700, 300_000_000L),
+						new FactoryParam(Country.JAPAN, 800, 2000, 900, 50_000_000L),
+						new FactoryParam(Country.VIETNAM, 200, 10000, 550, OPERATING_DAILY),
+						new FactoryParam(Country.INDONESIA, 300, 7000, 450, OPERATING_DAILY)),
+				master(1).routes());
+		Plan plan = Planner.plan(m, orders(400, 800, 0, 0)).get(0);
+		assertThat(plan.operatingDays().get(Country.CHINA)).isEqualTo(1);
+		assertThat(plan.operatingDays().get(Country.JAPAN)).isEqualTo(1);
+		assertThat(plan.operatingCost()).isEqualTo(300_000_000L + 50_000_000L);
+	}
+
+	@Test
+	void costOptionMinimizesShippingPlusOperatingAndFastOptionMinimizesDays() {
+		for (Map<Country, Integer> o : List.of(orders(3000, 3000, 3000, 3000), orders(9000, 1000, 6000, 12000),
+				orders(4500, 0, 20000, 800))) {
+			List<Plan> plans = Planner.plan(master(3), o);
+			Plan cost = plans.get(0);
+			Plan fast = plans.get(1);
+			Plan near = plans.get(2);
+			long costVar = cost.shippingCost() + cost.operatingCost();
+			assertThat(costVar).isLessThanOrEqualTo(fast.shippingCost() + fast.operatingCost());
+			assertThat(costVar).isLessThanOrEqualTo(near.shippingCost() + near.operatingCost());
+			assertThat(fast.totalDays()).isLessThanOrEqualTo(cost.totalDays()).isLessThanOrEqualTo(near.totalDays());
+			if (fast.totalDays() == cost.totalDays()) {
+				assertThat(fast.totalCost()).isLessThanOrEqualTo(cost.totalCost());
+			}
 		}
 	}
 }

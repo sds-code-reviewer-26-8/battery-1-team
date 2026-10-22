@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TASK-004 · 공장 운영비 추가 — 구현 전 체크</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#1b2333;--muted:#667189;--line:#e2e7f1;--accent:#2f5bea;
+--ok:#0f7a58;--ok-bg:#e1f5ec;--warn:#9a5208;--warn-bg:#fdefd8;--bad:#b3212f;--bad-bg:#fde7ea;--info-bg:#e9efff;
+--shadow:0 1px 2px rgba(20,30,60,.06),0 10px 28px rgba(20,30,60,.07)}
+@media (prefers-color-scheme:dark){:root{--bg:#0e131f;--card:#161d2d;--ink:#e7ebf4;--muted:#93a0ba;--line:#26304a;--accent:#8aa8ff;
+--ok:#63d6a9;--ok-bg:#12342b;--warn:#f1b660;--warn-bg:#3a2b13;--bad:#ff8c9a;--bad-bg:#3e1b22;--info-bg:#1c2745;--shadow:none}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "맑은 고딕","Segoe UI",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:32px 20px 72px}
+.hero{background:linear-gradient(135deg,#1f2b63 0%,#2f5bea 62%,#5f93f2 100%);color:#fff;border-radius:22px;padding:30px 32px;box-shadow:var(--shadow)}
+.hero .meta{font-size:13px;opacity:.85;letter-spacing:.02em}
+.hero h1{margin:8px 0 16px;font-size:27px;line-height:1.3;font-weight:800}
+.hero .verdict{margin:14px 0 0;font-size:15px;opacity:.95}
+.badge{display:inline-flex;align-items:center;gap:7px;font-weight:800;font-size:13px;padding:6px 14px;border-radius:999px;background:#fff}
+.badge.ready{color:#0f7a58}.badge.hilp{color:#9a5208}
+.badge .dot{width:9px;height:9px;border-radius:50%;background:currentColor}
+h2{margin:34px 0 14px;font-size:18px;display:flex;align-items:center;gap:10px}
+h2 .no{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:800}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.quote{border-left:4px solid var(--accent);background:var(--info-bg);padding:14px 18px;border-radius:0 12px 12px 0;white-space:pre-wrap}
+.lbl{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.chip{display:inline-block;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.bad{background:var(--bad-bg);color:var(--bad)}.chip.low{background:var(--info-bg);color:var(--accent)}.chip.skip{background:var(--line);color:var(--muted)}
+.card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.card p{margin:6px 0}
+.src{font-size:13px;color:var(--muted)}
+.chip.type{background:rgba(255,255,255,.2);color:#fff;margin-left:8px;font-size:12px;padding:5px 12px}
+.stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat>div{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.stat b{display:block;font-size:13px;margin-bottom:6px}
+.stat p{margin:6px 0 0;font-size:13px;color:var(--muted);line-height:1.5}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:6px 0 14px}
+.tile{text-align:center;padding:14px 10px;border:1px solid var(--line);border-radius:12px}
+.tile b{display:block;font-size:28px;line-height:1.1}.tile span{font-size:12px;color:var(--muted);font-weight:700}
+.tile.okt b{color:var(--ok)}.tile.badt b{color:var(--bad)}
+.meter{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0 4px}
+.meter span{height:10px;border-radius:6px;background:var(--line)}
+.meter span.on{background:var(--accent)}.meter.hot span.on{background:#e0662d}
+.meter-l{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:12px;color:var(--muted);text-align:center}
+.meter-l .on{color:var(--ink);font-weight:800}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;color:var(--muted);letter-spacing:.04em;padding:10px 12px;border-bottom:2px solid var(--line)}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.alert{border-radius:16px;padding:18px 22px;border:1px solid}
+.alert.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--ink)}
+.alert h3{margin:0 0 6px;color:var(--warn);font-size:16px}
+.alert ol{margin:10px 0 0;padding-left:22px}
+.check{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start}
+.check .n{width:44px;height:44px;border-radius:14px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:20px;font-weight:800}
+.check h3{margin:0 0 6px;font-size:16px}
+.kv{display:grid;grid-template-columns:84px 1fr;gap:4px 12px;font-size:14px}
+.kv.wide{grid-template-columns:112px 1fr;gap:8px 14px}
+.kv dt{color:var(--muted);font-weight:700}.kv dd{margin:0}
+.stack{display:grid;gap:14px}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 18px;margin-top:12px}
+summary{cursor:pointer;font-weight:700}
+code{font-family:Consolas,"D2Coding",monospace;font-size:13px;background:var(--info-bg);padding:1px 6px;border-radius:6px}
+footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}.stat{grid-template-columns:1fr 1fr}.hero h1{font-size:22px}}
+@media print{body{background:#fff}.card,details{box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="meta">TASK-004 · 권웅기 · 2026-10-22 14:47 · 시도 1/3</div>
+    <h1>공장 하루 운영비를 추가하고 시뮬레이션 비용에 반영하기</h1>
+    <span class="badge ready"><span class="dot"></span>READY · 구현으로 진행</span><span class="chip type">기능 추가</span>
+    <p class="verdict">배경과 목적을 이해했고, 변경 규모는 큼(Planner·마스터·화면·테스트 10개 안팎)입니다. 요청에 비용 정의·이름 변경과 기존 테스트 수정 범위가 명시되어 있어 사용자가 아는 위험으로 보고 진행합니다.</p>
+  </header>
+
+  <h2><span class="no">1</span>점검 상태</h2>
+  <div class="stat">
+    <div><b>이해 점검</b><span class="chip ok">정상</span><p>배경·목적 모두 이해함</p></div>
+    <div><b>저장소 상태</b><span class="chip ok">정상</span><p>feature 브랜치, 작업 트리 깨끗함</p></div>
+    <div><b>원격 동기화</b><span class="chip ok">정상</span><p>upstream 없음, origin/main 과 동일(0/0)</p></div>
+    <div><b>baseline 테스트</b><span class="chip ok">정상</span><p>70건 중 70건 성공</p></div>
+    <div><b>영향도 분석</b><span class="chip warn">주의</span><p>파일 약 12개 · 높음 2건 (사용자가 앎)</p></div>
+    <div><b>유형별 점검</b><span class="chip warn">주의</span><p>기능 추가 · PRD 8~9번 규칙과 불일치(문서 수정 제외)</p></div>
+  </div>
+
+  <h2><span class="no">2</span>요청 원문</h2>
+  <div class="quote">공장 운영비를 추가하고 시뮬레이션 비용에 반영해줘.
+배경: 지금 비용은 생산비와 선박 운항비뿐인데, 공장을 가동하는 데 드는 운영비도 비용에 포함해야 한다.
+요구:
+1. 마스터 데이터에서 공장별 '하루 운영비'를 입력·저장한다. 기본값은 모든 공장 하루 10억 원이고 화면은 억 원 단위로 입력한다(선박 하루 운항비와 같은 방식). DB에 이미 있는 공장 행은 10억으로 채운다.
+2. 공장 운영일수는 주문이 있는 공장의 0일부터 마지막 생산일까지다. 생산이 모두 끝난 뒤 배를 기다리는 날은 제외하고, 생산 도중 창고가 가득 차서 배를 기다리는 날은 포함한다. 주문이 없는 공장은 0이다. 공장 운영비 = 운영일수 × 하루 운영비.
+3. 시뮬레이션: 총 비용 = 생산비 + 운항비 + 운영비. 첫 번째 안을 '운항비 최소'에서 '총비용 최소'로 이름을 바꾸고 선택 기준을 운항비+운영비 최소로 한다(동점이면 소요 일수가 짧은 쪽). '가장 빠르게'는 소요 일수 최소(동점이면 비용), '가까운 곳부터'는 방식 그대로 두고 비용만 새 기준으로 계산한다.
+4. 화면: 주문 추가의 안별 요약, 주문 상세, 주문 목록의 총 비용에 운영비를 반영하고 운영비 항목을 보여 준다.
+5. 이미 확정된 주문은 바뀌지 않는다(저장된 계획 그대로). 상세에서 그 주문의 운영비는 '-'로 표시한다.
+범위: 기능 추가다. 비용 정의와 비용 안 이름이 바뀌므로 기존 테스트 중 총비용·운항비 값, '운항비 최소' 라벨, 기본값에서 비용 안이 배 1척이라는 단언은 새 규칙에 맞게 수정해야 한다(그 외 기존 테스트는 고치지 않는다). 새 규칙을 직접 단언하는 테스트를 추가한다. PRD/INTENT 문서는 이번에 수정하지 않는다.</div>
+
+  <h2><span class="no">3</span>이해 점검</h2>
+  <div class="grid2">
+    <section class="card">
+      <div class="top"><span class="lbl">배경 · 어떤 상황인가</span><span class="chip ok">✓ 이해함</span></div>
+      <p>현재 총 비용은 생산비(수량×셀 원가)와 운항비(배 운항일×하루 운항비)의 합입니다. 공장을 돌리는 날 드는 운영비가 없어서, 생산이 오래 걸리는 안이 실제보다 싸게 보입니다.</p>
+      <p class="src">근거: <code>Planner.java:367</code>(totalCost = productionCost + shipping) · <code>Master.java</code> · <code>Factory.java</code> · PRD 87~88행</p>
+    </section>
+    <section class="card">
+      <div class="top"><span class="lbl">목적 · 왜 필요한가</span><span class="chip ok">✓ 이해함</span></div>
+      <p>공장별 하루 운영비를 마스터에서 관리하고, 운영일수(0일~마지막 생산일)를 곱한 운영비를 총 비용에 넣어 '총비용 최소' 안을 고를 수 있게 하려는 것입니다. 확정 주문은 저장된 계획 그대로 유지합니다.</p>
+      <p class="src">근거: 요청 요구 1~5 · <code>OrderService.confirm</code> 이 plan JSON 을 저장</p>
+    </section>
+  </div>
+
+  <h2><span class="no">4</span>저장소 · 원격 동기화</h2>
+  <section class="card">
+    <dl class="kv wide">
+      <dt>현재 브랜치</dt><dd><span class="chip low">feature/factory-operation-budget</span></dd>
+      <dt>base 브랜치</dt><dd><span class="chip low">main</span> <span class="src">origin/HEAD 기준 · base 보다 앞 0 / 뒤 0</span></dd>
+      <dt>작업 트리</dt><dd><span class="chip ok">작업 트리 깨끗함</span></dd>
+      <dt>원격 동기화</dt><dd><span class="chip ok">up-to-date</span> upstream 이 없어 origin/main 과 비교: 앞 0 / 뒤 0</dd>
+      <dt>처리 내용</dt><dd>git fetch origin --prune 실행(다른 브랜치 feature/signup 만 갱신). 현재 브랜치는 원격에 없고 main 과 같아 pull 하지 않았습니다. push 하지 않았습니다.</dd>
+      <dt>실행한 명령</dt><dd><code>git remote -v</code> <code>git fetch origin --prune</code> <code>git rev-list --left-right --count @{u}...HEAD</code>(upstream 없음 오류) <code>git rev-list --left-right --count origin/main...HEAD</code></dd>
+    </dl>
+  </section>
+
+  <h2><span class="no">5</span>baseline 테스트 <span class="chip ok">70건 중 70건 성공</span></h2>
+  <section class="card">
+    <div class="tiles">
+      <div class="tile"><b>70</b><span>전체</span></div>
+      <div class="tile okt"><b>70</b><span>성공</span></div>
+      <div class="tile"><b>0</b><span>실패</span></div>
+    </div>
+    <table>
+      <thead><tr><th>스위트</th><th>실행 명령</th><th class="n">전체</th><th class="n">성공</th><th>결과</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>JUnit</td><td><code>./gradlew.bat test --rerun-tasks</code></td><td class="n">25</td><td class="n">25</td><td><span class="chip ok">통과</span></td><td>DemoApplicationTests 1 · OrderFlowTests 12 · PlannerTest 12</td></tr>
+        <tr><td>E2E (Playwright)</td><td><code>npm ci; npm test</code></td><td class="n">45</td><td class="n">45</td><td><span class="chip ok">통과</span></td><td>인메모리 DB · 8091 · 31.7초</td></tr>
+      </tbody>
+    </table>
+    <p class="src" style="margin-top:10px">구현 전부터 실패하던 테스트: 없음 (작업 트리 깨끗한 상태의 결과)</p>
+  </section>
+
+  <h2><span class="no">6</span>변경 규모와 영향도</h2>
+  <section class="card">
+    <div class="top"><span class="lbl">변경 규모</span><span class="chip warn">큼</span></div>
+    <div class="meter hot"><span class="on"></span><span class="on"></span><span class="on"></span><span></span></div>
+    <div class="meter-l"><span>작음</span><span>보통</span><span class="on">큼</span><span>매우 큼</span></div>
+    <p class="src" style="margin-top:12px">영향 파일 약 12개 · 계산(Planner)·마스터 엔티티/서비스/컨트롤러·화면 JS 4개·테스트 4~5개 · DB 컬럼 1개 추가</p>
+  </section>
+  <section class="card" style="margin-top:14px">
+    <div class="top"><span class="lbl">영향도 분석</span></div>
+    <p>비용 정의와 첫 번째 안 선택 기준이 바뀌어 Planner 의 안 선택·toPlan 이 핵심이고, 마스터 입력·저장 흐름과 세 화면, 총비용·라벨을 단언하는 기존 테스트가 함께 영향을 받습니다.</p>
+    <table>
+      <thead><tr><th style="width:96px">종류</th><th>대상</th><th>영향</th><th style="width:72px">수준</th></tr></thead>
+      <tbody>
+        <tr><td>직접 수정</td><td><code>Planner.java</code> plan/schedule/toPlan</td><td>운영일수(공장별 마지막 생산일)·운영비 계산, 총비용 최소 선택(운항비+운영비, 동점 소요일), 라벨 변경, FAST 동점은 비용 기준. 운영일수는 simulateFactory 의 생산 결과로 구해야 해 후보 비교 단계에서 계산이 필요합니다</td><td><span class="chip bad">높음</span></td></tr>
+        <tr><td>직접 수정</td><td><code>Plan.java</code>, <code>Master.java</code>(FactoryParam)</td><td>운영비 필드 추가. 생성자 호출처 PlannerTest 가 컴파일되도록 기존 시그니처 호환 필요</td><td><span class="chip warn">중간</span></td></tr>
+        <tr><td>직접 수정</td><td><code>Factory.java</code>, <code>MasterInitService</code>, <code>MasterService</code>, <code>MasterController</code></td><td>하루 운영비 컬럼(원 단위 long, 기본 10억원, 기존 행은 columnDefinition 기본값으로 채움), 억 원 입력 검증·저장, 폼 JSON</td><td><span class="chip bad">높음</span></td></tr>
+        <tr><td>화면·API</td><td><code>master.js</code>, <code>planview.js</code>, <code>order-new.js</code>, <code>orders.js</code></td><td>공장 표에 하루 운영비(억 원) 입력칸, 요약·카드에 운영비 항목, 상세의 확정 이전 주문은 '-'(plan JSON 에 필드가 없음)</td><td><span class="chip warn">중간</span></td></tr>
+        <tr><td>화면·API</td><td><code>/api/simulate</code>, <code>/api/master</code>, <code>/api/master/form</code>, <code>/master</code>, <code>/api/orders*</code></td><td>응답 JSON 에 운영비 필드 추가, 폼 키 추가. 확정 주문의 totalCost 컬럼은 저장값 그대로</td><td><span class="chip warn">중간</span></td></tr>
+        <tr><td>호출·참조</td><td><code>OrderService.confirm</code>, <code>Order</code>, <code>StoredPlan</code></td><td>plan.totalCost 가 새 정의로 저장됨. Order 에 운영비 컬럼을 둘지는 구현 결정(없어도 plan JSON 으로 표시 가능)</td><td><span class="chip low">낮음</span></td></tr>
+        <tr><td>테스트</td><td><code>api.spec.ts</code>(4.80억·shippingCost), <code>new-order-simulation.spec.ts</code>(라벨·총비용=생산+운항), <code>master.spec.ts</code>(MST-03-TC02 배 1척), <code>journey-full-flow</code>·<code>order-confirm</code>·<code>order-status</code>('운항비 최소' 라벨), <code>PlannerTest</code>(비용 비교)</td><td>요청이 허용한 범위(총비용·운항비 값, 라벨, 배 1척 단언)에서만 수정. 그 외는 수정 금지</td><td><span class="chip warn">중간</span></td></tr>
+        <tr><td>데이터</td><td>factory 테이블 / 개발 DB <code>./data/battery</code></td><td>ddl-auto=update 로 NOT NULL 컬럼 추가 시 기본값이 없으면 기존 행에서 실패하므로 기본값 정의 필요. 기존 orders.plan_json 은 변경하지 않음</td><td><span class="chip warn">중간</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card" style="margin-top:14px">
+    <div class="top"><span class="lbl">위험</span></div>
+    <table>
+      <thead><tr><th style="width:90px">심각도</th><th>위험</th><th style="width:96px">사용자 인지</th><th>대응</th></tr></thead>
+      <tbody>
+        <tr><td><span class="chip warn">중간</span></td><td>운영일수 계산이 모호함: 후보 수백 개를 비교하려면 후보마다 일별 생산을 시뮬레이션해야 함(성능), 대기일 포함/제외 경계가 틀리기 쉬움</td><td>알고 있음</td><td>운영일수 = 공장별 마지막 생산이 일어난 날+1 로 정의하고 단위 테스트로 대기 구간 두 경우를 단언</td></tr>
+        <tr><td><span class="chip warn">중간</span></td><td>기존 테스트 호환: PlannerTest 가 FactoryParam 4인자 생성자를, OrderFlowTests 가 운영비 없는 마스터 폼을 쓴다. 필드 추가가 컴파일·저장 실패를 일으킬 수 있음</td><td>일부만 앎</td><td>호환 생성자를 두고, 폼에 운영비 키가 없으면 기존 값을 유지하는 방식으로 기존 테스트를 고치지 않음</td></tr>
+        <tr><td><span class="chip low">낮음</span></td><td>PRD 87~88행 비용 규칙과 INTENT 가 새 규칙과 어긋남(문서 수정은 이번 범위 밖)</td><td>알고 있음</td><td>구현 후 보고에 문서 불일치를 명시</td></tr>
+        <tr><td><span class="chip low">낮음</span></td><td>개발 DB 기존 행 마이그레이션(기본 10억)</td><td>알고 있음</td><td>컬럼 기본값으로 처리하고 기존 DB 가 아닌 격리 DB 로 확인</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <h2><span class="no">7</span>유형별 점검 <span class="chip low">기능 추가</span></h2>
+  <section class="card">
+    <p>없던 비용 항목을 추가하고 기존 비용 정의·안 이름을 의도적으로 바꾸는 요청이므로 기능 추가로 판단했습니다. 결함 수정·리팩터링 요소는 없습니다.</p>
+    <table>
+      <thead><tr><th style="width:150px">점검 항목</th><th style="width:72px">상태</th><th>근거</th></tr></thead>
+      <tbody>
+        <tr><td>요구사항 근거</td><td><span class="chip ok">정상</span></td><td>요청 원문 요구 1~5. PRD/INTENT 에는 운영비가 없음(읽음, 수정 제외 명시)</td></tr>
+        <tr><td>기존 기능과의 충돌</td><td><span class="chip warn">주의</span></td><td>PRD 87~88행 '총 비용 = 생산비 + 운항비' 와 어긋나나 요청이 변경을 명시. 기존 테스트 일부 기대값이 바뀜(요청이 허용)</td></tr>
+        <tr><td>인수 조건</td><td><span class="chip ok">정상</span></td><td>기본 마스터에서 중국 400K 단독 주문 시 운영일수·운영비가 10억×일수로 나오고 총 비용에 합산됨, 첫 안 라벨 '총비용 최소', 확정 주문 상세 운영비 '-'</td></tr>
+        <tr><td>가정</td><td><span class="chip warn">주의</span></td><td>운영일수는 '마지막 생산일까지' = 마지막 생산이 일어난 날을 포함한 일수로 해석. 하루 운영비 입력은 선박과 같이 억 원 소수 허용·원 단위로 떨어지는 양수</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <h2><span class="no">8</span>구현 후 체크리스트 <span class="chip low">3개</span></h2>
+  <div class="stack">
+    <section class="card check"><div class="n">1</div><div>
+      <h3>운영비 계산과 총비용 최소 안 선택</h3>
+      <dl class="kv"><dt>확인 방법</dt><dd>JUnit <code>./gradlew.bat test --rerun-tasks</code> 의 신규 PlannerTest 케이스(운영일수 대기 포함·제외, 주문 없는 공장 0, 총비용=생산+운항+운영, 첫 안 라벨 '총비용 최소' 와 선택 기준)</dd><dt>합격 기준</dt><dd>신규 케이스 전부 통과하고 JUnit 실패 0건</dd></dl></div></section>
+    <section class="card check"><div class="n">2</div><div>
+      <h3>마스터 입력과 세 화면 표시</h3>
+      <dl class="kv"><dt>확인 방법</dt><dd>Playwright 신규 E2E(<code>npm test</code>): /master 에서 하루 운영비 기본 10 입력값 확인·저장, 주문 추가 안 카드와 요약의 운영비, 확정 후 상세 운영비, 목록 총 비용</dd><dt>합격 기준</dt><dd>마스터 기본값 10, 요약·카드에 '운영비 N억원' 노출, 주문 목록 총 비용 = 생산+운항+운영(소수 2자리), 신규 E2E 실패 0건</dd></dl></div></section>
+    <section class="card check"><div class="n">3</div><div>
+      <h3>기존 동작 유지(확정 주문 불변·허용 외 테스트 무수정)</h3>
+      <dl class="kv"><dt>확인 방법</dt><dd>Gradle 전체 테스트와 <code>npm test</code> 를 실행하고 <code>git diff --stat</code> 으로 수정된 기존 테스트 확인. 확정 주문 plan JSON 은 마스터 변경 후에도 동일함을 OrderFlowTests 로 확인</dd><dt>합격 기준</dt><dd>baseline 70건 중 요청이 허용한 단언(총비용·운항비 값, '운항비 최소' 라벨, 배 1척) 외 수정 없이 전부 통과, 기존 확정 주문 상세 운영비는 '-'. <code>docs/evidence/</code> 는 검색에서 제외</dd></dl></div></section>
+  </div>
+
+  <details>
+    <summary>확인한 근거 (읽은 파일 · 실행한 명령)</summary>
+    <ul>
+      <li>읽음: <code>Planner.java</code>, <code>Plan.java</code>, <code>Master.java</code>, <code>StoredPlan.java</code>, <code>Factory.java</code>, <code>Order.java</code>, <code>MasterService</code>, <code>MasterInitService</code>, <code>OrderService</code>, <code>SimulationService</code>, <code>MasterController</code>, <code>OrderController</code>, <code>SimulationController</code>, <code>planview.js</code>, <code>master.js</code>, <code>master.html</code>, <code>application.properties</code>(main/test)</li>
+      <li>일부만 읽음(grep): <code>order-new.js</code>, <code>order-detail.js</code>, <code>orders.js</code>, 테스트 전체(비용·라벨 관련 줄만), <code>docs/PRD.md</code>(운항비·총 비용 줄만). <code>docs/INTENT.md</code> 는 읽지 않음(grep 결과 해당 용어 없음)</li>
+      <li>명령: <code>git branch/status/remote/fetch/rev-list</code>, <code>./gradlew.bat test --rerun-tasks</code>, <code>npm ci; npm test</code></li>
+    </ul>
+  </details>
+
+  <footer>precheck · TASK-004 · 구현 전 체크 증거</footer>
+</div>
+</body>
+</html>

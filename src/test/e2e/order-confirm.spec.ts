@@ -32,7 +32,7 @@ test('CFM-01 주문 확정 (정상)', async ({ page }) => {
   await expect(page.locator('h1')).toContainText(`주문 #${id}`);
   await expect(statusBadge(page)).toHaveText('확정');
   await expect(metaValue(page, '작성자')).toHaveText('admin');
-  await expect(metaValue(page, '경로')).toHaveText('운항비 최소');
+  await expect(metaValue(page, '경로')).toHaveText('총비용 최소');
   await expect(metaValue(page, '메모')).toHaveText('E2E 테스트');
 
   // 상태 이력 1행: 이전 '-', 새 '확정', 변경자 admin
@@ -53,7 +53,7 @@ test('CFM-05 확정 후 목록 반영', async ({ page }) => {
     .toBeVisible();
   const cells = await listRowCells(page, id);
   expect(cells[2]).toBe('12,000'); // 총 수량(K)
-  expect(cells[3]).toBe('운항비 최소'); // 경로
+  expect(cells[3]).toBe('총비용 최소'); // 경로
   expect(cells[6]).toBe('확정'); // 상태
   expect(cells[7]).toBe('admin'); // 작성자
 
