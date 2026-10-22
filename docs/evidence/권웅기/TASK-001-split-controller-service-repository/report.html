@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TASK-001 · Controller/Service/Repository 업무별 분리 — 구현 후 보고</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#1b2333;--muted:#667189;--line:#e2e7f1;--accent:#2f5bea;
+--ok:#0f7a58;--ok-bg:#e1f5ec;--warn:#9a5208;--warn-bg:#fdefd8;--bad:#b3212f;--bad-bg:#fde7ea;--info-bg:#e9efff;
+--shadow:0 1px 2px rgba(20,30,60,.06),0 10px 28px rgba(20,30,60,.07)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "맑은 고딕","Segoe UI",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:32px 20px 72px}
+.hero{border-radius:22px;padding:30px 32px;box-shadow:var(--shadow);color:#fff;background:linear-gradient(135deg,#0c4a3a 0%,#0f7a58 60%,#34b58a 100%)}
+.hero .meta{font-size:13px;opacity:.88}
+.hero h1{margin:8px 0 16px;font-size:27px;line-height:1.3;font-weight:800}
+.hero .verdict{margin:14px 0 0}
+.badge{display:inline-flex;align-items:center;gap:7px;font-weight:800;font-size:13px;padding:6px 14px;border-radius:999px;background:#fff;color:#0f7a58}
+.badge .dot{width:9px;height:9px;border-radius:50%;background:currentColor}
+.chip.type{background:rgba(255,255,255,.2);color:#fff;margin-left:8px;font-size:12px;padding:5px 12px}
+h2{margin:34px 0 14px;font-size:18px;display:flex;align-items:center;gap:10px}
+h2 .no{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:800}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow)}
+.stack{display:grid;gap:14px}
+.lbl{font-size:12px;font-weight:800;color:var(--muted);margin:18px 0 6px}
+.src{font-size:13px;color:var(--muted)}
+.card ul{margin:4px 0;padding-left:20px}
+.chip{display:inline-block;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.chip.pass{background:var(--ok-bg);color:var(--ok)}.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.skip{background:var(--line);color:var(--muted)}
+.zone{border-width:2px}.zone.YELLOW{border-color:var(--warn)}
+.zone-head{display:flex;align-items:center;gap:12px}
+.zone-dot{width:22px;height:22px;border-radius:50%;background:var(--warn)}
+.zone-name{font-size:22px;font-weight:800;color:var(--warn)}
+.zone-summary{font-size:17px;font-weight:700;margin:10px 0 0}
+.todo{border-radius:10px;padding:10px 14px;background:var(--warn-bg)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.step{position:relative;padding-top:22px}
+.step .tag{position:absolute;top:-12px;left:18px;font-size:12px;font-weight:800;color:#fff;background:var(--accent);padding:3px 12px;border-radius:999px}
+.check{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:start}
+.check .n{width:44px;height:44px;border-radius:14px;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:20px;font-weight:800}
+.check h3{margin:0 0 4px;font-size:16px}.check p{margin:2px 0;color:var(--muted);font-size:14px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:6px 0 14px}
+.tile{text-align:center;padding:14px 10px;border:1px solid var(--line);border-radius:12px}
+.tile b{display:block;font-size:28px;line-height:1.1}.tile span{font-size:12px;color:var(--muted);font-weight:700}
+.tile.okt b{color:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;color:var(--muted);padding:10px 12px;border-bottom:2px solid var(--line)}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;white-space:nowrap}
+.quote{border-left:4px solid var(--accent);background:var(--info-bg);padding:14px 18px;border-radius:0 12px 12px 0}
+.headline{font-size:19px;font-weight:800;margin:10px 0 0}
+.links a{color:var(--accent)}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 18px;margin-top:12px}
+summary{cursor:pointer;font-weight:700}
+pre{margin:10px 0 0;padding:12px 14px;border-radius:10px;background:var(--info-bg);overflow:auto;font:13px/1.5 Consolas,monospace}
+code{font-family:Consolas,monospace;font-size:13px;background:var(--info-bg);padding:1px 6px;border-radius:6px}
+footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
+@media (max-width:720px){.steps{grid-template-columns:1fr}.tiles{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="meta">TASK-001 · 권웅기 · 2026-10-22 11:13 · 시도 1/3</div>
+    <h1>Controller / Service / Repository 업무별 파일 분리</h1>
+    <span class="badge"><span class="dot"></span>PASS · 모든 점검 통과, 루프 종료</span><span class="chip type">리팩터링</span>
+    <p class="verdict">JUnit 22/22, E2E 45/45가 baseline과 같게 통과했고 템플릿·E2E 변경이 없으며 URL 매핑이 동일합니다.</p>
+  </header>
+
+  <h2><span class="no">1</span>영역 판정</h2>
+  <section class="card zone YELLOW">
+    <div class="zone-head"><span class="zone-dot"></span><span class="zone-name">Yellow</span></div>
+    <p class="zone-summary">변경 규모가 크고 컨트롤러·서비스를 직접 단언하는 단위 테스트가 없어 통합·E2E 에 의존합니다.</p>
+    <div class="lbl">이 영역의 기준</div>
+    <ul><li>품질이 고르지 않은 느낌, 기존 테스트를 완전히 믿기 어려운 곳</li><li>변경 규모가 크거나 일부 검증이 간접 근거인 곳</li></ul>
+    <div class="lbl">판정 이유</div>
+    <ul><li>파일 약 20개가 삭제·추가된 큰 구조 변경</li><li>Transactional 경계 유지는 테스트가 직접 단언하지 않고 통합·E2E 통과로 간접 확인</li><li>공용 아닌 feature 브랜치이고 커밋 전 상태</li></ul>
+    <div class="lbl">판단에 쓴 신호</div>
+    <table>
+      <thead><tr><th>항목</th><th>수준</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>변경 규모</td><td><span class="chip warn">Yellow</span></td><td>컨트롤러 6, 서비스 4, 리포지토리 5 파일 신설</td></tr>
+        <tr><td>테스트 커버리지</td><td><span class="chip warn">Yellow</span></td><td>기존 통합·E2E 로 동작 보호, 구조 자체의 단위 테스트 없음</td></tr>
+        <tr><td>회귀 테스트</td><td><span class="chip pass">Green</span></td><td>67/67 통과</td></tr>
+        <tr><td>민감 영역</td><td><span class="chip pass">Green</span></td><td>업무 규칙 로직은 그대로 이동만 함</td></tr>
+      </tbody>
+    </table>
+    <div class="lbl">해야 할 작업</div>
+    <div class="todo"><ul><li>Diff 요약을 리뷰하고 서비스 간 메서드 이동 누락이 없는지 확인한다</li><li>Transactional 경계에 대한 테스트 보강을 검토한다</li></ul></div>
+  </section>
+
+  <h2><span class="no">2</span>한눈에 보는 요약</h2>
+  <div class="steps">
+    <section class="card step"><span class="tag">Precheck</span>
+      <ul><li>baseline 67/67 확인, 영향 범위 분석</li><li>체크리스트 3개 설정</li></ul></section>
+    <section class="card step"><span class="tag">Implement</span>
+      <ul><li>AppController 를 업무별 컨트롤러와 LoginUserAdvice 로 분리</li><li>BatteryService 를 4개 서비스로, Repository 5개를 독립 파일로 분리</li></ul></section>
+    <section class="card step"><span class="tag">Report</span>
+      <ul><li>체크리스트 3/3, 회귀 67/67 직접 실행</li><li>URL 매핑 13개가 이전과 동일함을 대조</li></ul></section>
+  </div>
+
+  <h2><span class="no">3</span>테스트 결과</h2>
+  <section class="card">
+    <ul><li>체크리스트 3/3 통과</li><li>JUnit 22 + E2E 45 모두 통과 (baseline 과 동일)</li></ul>
+
+    <div class="lbl">중요 체크리스트 3개</div>
+    <div class="stack">
+      <div class="check"><div class="n">1</div><div>
+        <h3>baseline 과 같은 테스트 결과</h3><p>확인: ./gradlew.bat test --rerun-tasks, npm test</p><p>근거: 결과 XML 1+9+12=22건 실패 0, Playwright 45 passed. 기존 테스트 변경은 OrderFlowTests 의 import·필드 타입 2줄뿐</p></div><span class="chip pass">통과</span></div>
+      <div class="check"><div class="n">2</div><div>
+        <h3>외부 동작 불변</h3><p>확인: git diff main --stat -- templates src/test/e2e, 매핑 어노테이션 비교</p><p>근거: 출력 0줄. 이전 AppController 와 새 컨트롤러의 Mapping 어노테이션 13개 목록이 diff 로 동일</p></div><span class="chip pass">통과</span></div>
+      <div class="check"><div class="n">3</div><div>
+        <h3>업무별 파일 분리 달성</h3><p>확인: wc -l</p><p>근거: 컨트롤러 5+Advice, 서비스 4(+BusinessException), 최대 136줄(MasterService), 리포지토리 5개 독립 파일</p></div><span class="chip pass">통과</span></div>
+    </div>
+
+    <div class="lbl">수용 기준</div>
+    <table>
+      <thead><tr><th>기준</th><th>결과</th><th>근거</th></tr></thead>
+      <tbody>
+        <tr><td>Controller·Service·Repository 를 업무별 파일로 분리 (목적)</td><td><span class="chip pass">통과</span></td><td>wc -l 결과 업무별 파일로 나뉘고 150줄 이하</td></tr>
+        <tr><td>동작·URL·템플릿 불변 (범위)</td><td><span class="chip pass">통과</span></td><td>템플릿·E2E diff 0, 매핑 동일, 전체 테스트 통과</td></tr>
+        <tr><td>수정 파일 범위</td><td><span class="chip pass">통과</span></td><td>변경은 controller/service/repository, DataInitializer, OrderFlowTests import 뿐</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">유형별 확인 (리팩터링)</div>
+    <table>
+      <thead><tr><th>확인 항목</th><th>결과</th><th>근거</th></tr></thead>
+      <tbody>
+        <tr><td>외부 동작 불변</td><td><span class="chip pass">통과</span></td><td>E2E 45건(로그인·주문 목록·필터 등)과 OrderFlowTests 9건 통과, 매핑 목록 동일</td></tr>
+        <tr><td>기존 테스트 미변경</td><td><span class="chip pass">통과</span></td><td>git diff: OrderFlowTests 는 import 와 필드 타입 교체만, 기대값 변경·삭제 없음. E2E 변경 없음</td></tr>
+        <tr><td>baseline 과 동일 결과</td><td><span class="chip pass">통과</span></td><td>전체 67, 성공 67 (baseline 67/67)</td></tr>
+        <tr><td>동작 변경·기능 추가 없음</td><td><span class="chip pass">통과</span></td><td>새 주소·문구 없음(매핑 동일), 템플릿 무변경</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">Regression Test (보유한 테스트 전체)</div>
+    <div class="tiles">
+      <div class="tile"><b>67</b><span>전체</span></div>
+      <div class="tile okt"><b>67</b><span>통과</span></div>
+      <div class="tile"><b>0</b><span>실패</span></div>
+      <div class="tile"><b>0</b><span>건너뜀</span></div>
+    </div>
+    <table>
+      <thead><tr><th>테스트</th><th>실행 명령</th><th class="n">baseline</th><th class="n">전체</th><th class="n">통과</th><th class="n">실패</th><th class="n">건너뜀</th></tr></thead>
+      <tbody>
+        <tr><td>JUnit</td><td><code>./gradlew.bat test --rerun-tasks</code></td><td class="n">22</td><td class="n">22</td><td class="n">22</td><td class="n">0</td><td class="n">0</td></tr>
+        <tr><td>E2E (Playwright)</td><td><code>npm test</code></td><td class="n">45</td><td class="n">45</td><td class="n">45</td><td class="n">0</td><td class="n">0</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">실행하지 못한 검증</div>
+    <ul><li>없음</li></ul>
+
+    <div class="lbl">정적 점검 (lint · 포매터 · 컴파일 경고)</div>
+    <table>
+      <thead><tr><th>점검</th><th>실행 명령</th><th>결과</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>컴파일 경고</td><td><code>./gradlew.bat compileJava compileTestJava --warning-mode all --rerun-tasks</code></td><td><span class="chip pass">통과</span></td><td>경고 0건, BUILD SUCCESSFUL</td></tr>
+        <tr><td>린트 · 포매터</td><td>—</td><td><span class="chip skip">미설정</span></td><td>저장소에 설정 없음. 탭 들여쓰기 유지 확인</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">테스트 커버리지 (변경한 동작을 직접 단언하는 테스트)</div>
+    <div><span>동작 불변을 OrderFlowTests(주문 흐름, MockMvc)와 E2E 45건이 직접 단언합니다. 구조 변경이라 새 테스트는 추가하지 않았습니다.</span> <span class="chip pass">기존 테스트</span></div>
+
+    <div class="lbl">변경한 파일</div>
+    <ul><li><code>src/main/java/com/example/demo/controller/*</code> (AppController 삭제, 6개 신설)</li><li><code>src/main/java/com/example/demo/service/*</code> (BatteryService 삭제, 4개 신설)</li><li><code>src/main/java/com/example/demo/repository/*</code> (래퍼 2개 삭제, 5개 신설)</li><li><code>src/main/java/com/example/demo/config/DataInitializer.java</code></li><li><code>src/test/java/com/example/demo/OrderFlowTests.java</code> (import·타입만)</li></ul>
+  </section>
+
+  <h2><span class="no">4</span>결론</h2>
+  <section class="card">
+    <div><span class="chip pass">PASS</span> <span class="src">&nbsp;2026-10-22 11:13 · 1번째 라운드</span></div>
+    <p class="headline">업무별 파일 분리가 끝났고 동작은 baseline 과 같습니다.</p>
+    <div class="lbl">요청</div>
+    <div class="quote">Controller,Service,Repository가 현재 하나의 클래스로만 작성되어있는데, 하나의 파일에 너무 많은 내용이 들어가지 않도록 업무 종류별로 파일을 분리하는 refactoring을 진행해줘</div>
+    <div class="lbl">남은 이슈</div>
+    <ul><li>없음 (8080 프로세스는 건드리지 않았고, 8091 에 남은 리스너 없음)</li></ul>
+    <div class="lbl">다음에 할 일</div>
+    <div>변경을 검토한 뒤 커밋·PR 여부를 정하세요.</div>
+    <div class="lbl">자세히</div>
+    <div class="links"><a href="precheck.html">점검 페이지</a></div>
+  </section>
+
+  <details>
+    <summary>확인한 근거 (실행 출력 발췌)</summary>
+    <pre>BUILD SUCCESSFUL (test --rerun-tasks)
+DemoApplicationTests tests=1 failures=0
+OrderFlowTests tests=9 failures=0
+PlannerTest tests=12 failures=0
+Playwright: 45 passed (38.2s)
+git diff main --stat -- templates src/test/e2e : (empty)
+mapping annotations old vs new: identical (13)
+wc -l: max 136 (MasterService)</pre>
+  </details>
+
+  <footer>report · TASK-001 · 구현 후 보고 증거</footer>
+</div>
+</body>
+</html>
