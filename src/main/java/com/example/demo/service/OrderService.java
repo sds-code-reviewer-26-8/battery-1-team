@@ -125,7 +125,7 @@ public class OrderService {
 		if (order.getVersion() != expectedVersion) {
 			throw conflict();
 		}
-		if (order.getStatus().next().isEmpty()) {
+		if (!order.getStatus().isEditable()) {
 			throw new BusinessException("%s 상태의 주문은 고객사 이름을 바꿀 수 없습니다".formatted(order.getStatus().getLabel()));
 		}
 		order.setCustomerName(name);

@@ -55,7 +55,7 @@
 		const actions = document.getElementById('actions');
 		actions.replaceChildren();
 		actions.hidden = o.next.length === 0;
-		document.getElementById('finalNote').hidden = o.next.length > 0;
+		document.getElementById('finalNote').hidden = o.editable;
 		for (const s of o.next) {
 			const form = h('form', {method: 'post', class: 'status-form'},
 				h('button', {type: 'submit', class: s.name === 'CANCELED' ? 'danger' : 'primary'}, s.label + '(으)로 변경'));

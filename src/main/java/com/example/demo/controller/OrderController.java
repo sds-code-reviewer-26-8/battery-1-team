@@ -104,7 +104,7 @@ public class OrderController {
 			List<HistoryRow> history = service.history(id).stream().map(OrderController::toHistoryRow).toList();
 			return ResponseEntity.ok(new OrderDetail(o.getId(), o.getStatus().name(), o.getStatus().getLabel(),
 					o.getStatus().next().stream().map(StatusOption::of).toList(), format(o.getConfirmedAt(), MINUTE),
-					o.getCreatedBy(), o.getRouteLabel(), o.getMemo(), o.getCustomerName(), !o.getStatus().next().isEmpty(), o.getVersion(),
+					o.getCreatedBy(), o.getRouteLabel(), o.getMemo(), o.getCustomerName(), o.getStatus().isEditable(), o.getVersion(),
 					json.readTree(o.getPlanJson()), history));
 		} catch (BusinessException e) {
 			return ApiErrors.of(e);
