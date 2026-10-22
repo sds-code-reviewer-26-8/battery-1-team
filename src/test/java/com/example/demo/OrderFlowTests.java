@@ -129,6 +129,20 @@ class OrderFlowTests {
 	}
 
 	@Test
+	void cancelKeepsOrderAndHistory() throws Exception {
+		MockHttpSession s = login();
+		long id = confirm(s);
+		var order = orderService.getOrder(id);
+
+		orderService.changeStatus(id, OrderStatus.CANCELED, order.getVersion(), "admin");
+
+		assertThat(orderService.getOrder(id).getStatus()).isEqualTo(OrderStatus.CANCELED);
+		var history = orderService.history(id);
+		assertThat(history).hasSize(2);
+		assertThat(history.get(1).getToStatus()).isEqualTo(OrderStatus.CANCELED);
+	}
+
+	@Test
 	void confirmFailsWhenMasterChangedAfterSimulation() throws Exception {
 		MockHttpSession s = login();
 		mvc.perform(post("/api/orders").session(s).contentType(MediaType.APPLICATION_JSON)

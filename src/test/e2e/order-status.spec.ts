@@ -80,17 +80,13 @@ test('STS-03 진행 → 완료 (최종 상태)', async ({ page }) => {
 });
 
 test('STS-05 주문 취소', async ({ page }) => {
-  // 알려진 결함(PR #5 A1): 현재 구현은 취소 시 주문을 삭제하고, 곧바로 이어지는 상세 화면이
-  // 500 오류("주문을 찾을 수 없습니다")가 된다. 요구사항은 '취소' 상태로 목록에 남는 것이다.
-  // 결함을 고치면 이 테스트가 통과하면서 '예상과 다르게 통과'로 알려 주므로, 그때 아래 줄을 지운다.
-  test.fail(true, '취소 시 주문이 삭제됨 (요구: 취소 상태로 목록에 남음)');
-
   const id = await createOrderViaApi(page, 'STS-05');
   await page.goto('/orders');
   const before = { canceled: await chipCount(page, '취소'), all: await chipCount(page, '전체') };
 
   await page.goto(`/orders/${id}`);
   await changeStatus(page, '취소(으)로 변경');
+  await expect(page).toHaveURL(/\/orders$/);
 
   // 요구사항 기준: 주문이 '취소' 상태로 목록에 남고, '취소' 칩 건수가 1 늘어난다.
   await page.goto('/orders');

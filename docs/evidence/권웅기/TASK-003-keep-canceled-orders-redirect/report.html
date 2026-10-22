@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TASK-003 · 주문 취소 이력 보존과 목록 이동 — 구현 후 보고</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#1b2333;--muted:#667189;--line:#e2e7f1;--accent:#2f5bea;
+--ok:#0f7a58;--ok-bg:#e1f5ec;--warn:#9a5208;--warn-bg:#fdefd8;--bad:#b3212f;--bad-bg:#fde7ea;--info-bg:#e9efff;
+--shadow:0 1px 2px rgba(20,30,60,.06),0 10px 28px rgba(20,30,60,.07)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "맑은 고딕","Segoe UI",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:32px 20px 72px}
+.hero{border-radius:22px;padding:30px 32px;box-shadow:var(--shadow);color:#fff;background:linear-gradient(135deg,#0c4a3a 0%,#0f7a58 60%,#34b58a 100%)}
+.hero .meta{font-size:13px;opacity:.88}
+.hero h1{margin:8px 0 16px;font-size:27px;line-height:1.3;font-weight:800}
+.hero .verdict{margin:14px 0 0}
+.badge{display:inline-flex;align-items:center;gap:7px;font-weight:800;font-size:13px;padding:6px 14px;border-radius:999px;background:#fff;color:#0f7a58}
+.chip.type{background:rgba(255,255,255,.2);color:#fff;margin-left:8px;font-size:12px;padding:5px 12px}
+.badge .dot{width:9px;height:9px;border-radius:50%;background:currentColor}
+h2{margin:34px 0 14px;font-size:18px;display:flex;align-items:center;gap:10px}
+h2 .no{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:800}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow)}
+.card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.stack{display:grid;gap:14px}
+.lbl{font-size:12px;font-weight:800;color:var(--muted);margin:18px 0 6px}
+.src{font-size:13px;color:var(--muted)}
+.card ul{margin:4px 0;padding-left:20px}
+.chip{display:inline-block;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.chip.pass{background:var(--ok-bg);color:var(--ok)}.chip.fail{background:var(--bad-bg);color:var(--bad)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.skip{background:var(--line);color:var(--muted)}
+.zone{border-width:2px}.zone.YELLOW{border-color:var(--warn)}
+.zone-head{display:flex;align-items:center;gap:12px}
+.zone-dot{width:22px;height:22px;border-radius:50%;background:var(--warn)}
+.zone-name{font-size:22px;font-weight:800;color:var(--warn)}
+.zone-summary{font-size:17px;font-weight:700;margin:10px 0 0}
+.todo{border-radius:10px;padding:10px 14px;background:var(--warn-bg)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.step{position:relative;padding-top:22px}
+.step .tag{position:absolute;top:-12px;left:18px;font-size:12px;font-weight:800;color:#fff;background:var(--accent);padding:3px 12px;border-radius:999px}
+.check{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:start}
+.check .n{width:44px;height:44px;border-radius:14px;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:20px;font-weight:800}
+.check h3{margin:0 0 4px;font-size:16px}.check p{margin:2px 0;color:var(--muted);font-size:14px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:6px 0 14px}
+.tile{text-align:center;padding:14px 10px;border:1px solid var(--line);border-radius:12px}
+.tile b{display:block;font-size:28px;line-height:1.1}.tile span{font-size:12px;color:var(--muted);font-weight:700}
+.tile.okt b{color:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;color:var(--muted);padding:10px 12px;border-bottom:2px solid var(--line)}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;white-space:nowrap}
+.quote{border-left:4px solid var(--accent);background:var(--info-bg);padding:14px 18px;border-radius:0 12px 12px 0;white-space:pre-wrap}
+.headline{font-size:19px;font-weight:800;margin:10px 0 0}
+.links a{color:var(--accent)}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 18px;margin-top:12px}
+summary{cursor:pointer;font-weight:700}
+pre{margin:10px 0 0;padding:12px 14px;border-radius:10px;background:var(--info-bg);overflow:auto;font:13px/1.5 Consolas,monospace}
+code{font-family:Consolas,monospace;font-size:13px;background:var(--info-bg);padding:1px 6px;border-radius:6px}
+footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
+@media (max-width:720px){.steps{grid-template-columns:1fr}.tiles{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="meta">TASK-003 · 권웅기 · 2026-10-22 13:33 · 시도 1/3</div>
+    <h1>주문 취소 이력 보존과 목록 이동</h1>
+    <span class="badge"><span class="dot"></span>PASS · 모든 점검 통과, 루프 종료</span><span class="chip type">기능 추가</span>
+    <p class="verdict">취소해도 주문과 이력이 남고 취소 후 목록으로 이동함을 STS-05 와 JUnit 으로 직접 확인했고, JUnit 23건 E2E 45건이 모두 통과했습니다.</p>
+  </header>
+
+  <h2><span class="no">1</span>영역 판정</h2>
+  <section class="card zone YELLOW">
+    <div class="zone-head"><span class="zone-dot"></span><span class="zone-name">Yellow</span></div>
+    <p class="zone-summary">취소 정책(삭제에서 보존)이라는 업무 규칙 변경이라 꼼꼼한 검토가 필요합니다.</p>
+    <div class="lbl">판정 이유</div>
+    <ul><li>주문 취소 시 데이터 처리 정책이 바뀜 (INTENT.md 28, 41행은 아직 옛 서술)</li><li>공용이 아닌 작업 브랜치 fix/order-cancel, 변경 규모는 작음 (4파일)</li></ul>
+    <div class="lbl">판단에 쓴 신호</div>
+    <table>
+      <thead><tr><th>항목</th><th>수준</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>변경 규모</td><td><span class="chip pass">Green</span></td><td>프로덕션 2파일, 테스트 2파일</td></tr>
+        <tr><td>테스트 커버리지</td><td><span class="chip pass">Green</span></td><td>STS-05 와 cancelKeepsOrderAndHistory 가 직접 단언</td></tr>
+        <tr><td>업무 규칙</td><td><span class="chip warn">Yellow</span></td><td>취소 후 데이터 보존 정책, 문서와 불일치</td></tr>
+        
+      </tbody>
+    </table>
+    <div class="lbl">해야 할 작업</div>
+    <div class="todo"><ul><li>Evidence 를 더 꼼꼼하게 살펴보고 Diff 요약을 리뷰한다</li><li>INTENT.md 28, 41행 갱신 여부를 정한다</li></ul></div>
+  </section>
+
+  <h2><span class="no">2</span>한눈에 보는 요약</h2>
+  <div class="steps">
+    <section class="card step"><span class="tag">Precheck</span>
+      <ul><li>취소 시 삭제 위치와 STS-05 test.fail 확인</li><li>체크리스트 3개와 baseline 67/67 설정</li></ul></section>
+    <section class="card step"><span class="tag">Implement</span>
+      <ul><li>취소 시 orders.delete 제거, 취소 성공 시 /orders 이동</li><li>STS-05 정상화, JUnit 1건 추가</li></ul></section>
+    <section class="card step"><span class="tag">Report</span>
+      <ul><li>체크리스트 3/3, 회귀 68/68 직접 실행</li><li>추가 테스트는 implement 가 작성한 것을 확인</li></ul></section>
+  </div>
+
+  <h2><span class="no">3</span>테스트 결과</h2>
+  <section class="card">
+    <ul><li>체크리스트 3/3 통과</li><li>JUnit 23 + E2E 45 모두 통과 (baseline 67 에서 신규 1건 증가)</li></ul>
+
+    <div class="lbl">중요 체크리스트 3개</div>
+    <div class="stack">
+      <div class="check"><div class="n">1</div><div>
+        <h3>취소해도 주문이 남고 목록으로 이동한다</h3><p>확인: npm test 전체 실행 (STS-05 의 test.fail 제거본)</p><p>근거: STS-05 ok. 취소 후 URL /orders, 취소 칩 +1, 전체 칩 불변 단언 통과</p></div><span class="chip pass">통과</span></div>
+      <div class="check"><div class="n">2</div><div>
+        <h3>취소 이력이 보존된다</h3><p>확인: JUnit cancelKeepsOrderAndHistory</p><p>근거: 취소 후 getOrder 성공, 상태 CANCELED, 이력 2행, 마지막 to=CANCELED. OrderFlowTests 10건 통과</p></div><span class="chip pass">통과</span></div>
+      <div class="check"><div class="n">3</div><div>
+        <h3>기존 테스트가 유지된다</h3><p>확인: gradlew test --rerun-tasks, npm test, git diff</p><p>근거: JUnit 23건, E2E 45건 전부 통과</p></div><span class="chip pass">통과</span></div>
+    </div>
+
+    <div class="lbl">수용 기준</div>
+    <table>
+      <thead><tr><th>기준</th><th>결과</th><th>근거</th></tr></thead>
+      <tbody>
+        <tr><td>취소 시 주문 삭제 없이 이력 보존 (목적)</td><td><span class="chip pass">통과</span></td><td>JUnit 단언, STS-05 목록 잔존 단언</td></tr>
+        <tr><td>취소 후 목록 화면으로 이동 (목적)</td><td><span class="chip pass">통과</span></td><td>STS-05 의 toHaveURL(/orders)</td></tr>
+        
+        <tr><td>요청 범위만 변경 (범위)</td><td><span class="chip pass">통과</span></td><td>git diff 4파일, 목록 JS 스키마 INTENT 미변경</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">유형별 확인 (기능 추가)</div>
+    <table>
+      <thead><tr><th>확인 항목</th><th>결과</th><th>근거</th></tr></thead>
+      <tbody>
+        <tr><td>인수 조건 충족</td><td><span class="chip pass">통과</span></td><td>보존, 이력, 이동을 STS-05 와 JUnit 이 각각 단언</td></tr>
+        <tr><td>기존 기능 유지</td><td><span class="chip pass">통과</span></td><td>회귀 68/68 통과, 기존 테스트 기대값 변경 없음 (STS-05 의 test.fail 제거만)</td></tr>
+        <tr><td>요구사항과 충돌 없음</td><td><span class="chip pass">통과</span></td><td>PRD 63-64행과 일치. INTENT.md 28, 41행은 옛 서술이라 갱신 필요 (남은 이슈)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">Regression Test (보유한 테스트 전체)</div>
+    <div class="tiles">
+      <div class="tile"><b>68</b><span>전체</span></div>
+      <div class="tile okt"><b>68</b><span>통과</span></div>
+      <div class="tile"><b>0</b><span>실패</span></div>
+      <div class="tile"><b>0</b><span>건너뜀</span></div>
+    </div>
+    <table>
+      <thead><tr><th>테스트</th><th>실행 명령</th><th class="n">baseline</th><th class="n">전체</th><th class="n">통과</th><th class="n">실패</th><th class="n">건너뜀</th></tr></thead>
+      <tbody>
+        <tr><td>JUnit</td><td><code>./gradlew.bat test --rerun-tasks</code></td><td class="n">22</td><td class="n">23</td><td class="n">23</td><td class="n">0</td><td class="n">0</td></tr>
+        <tr><td>E2E (Playwright)</td><td><code>npm test</code></td><td class="n">45</td><td class="n">45</td><td class="n">45</td><td class="n">0</td><td class="n">0</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">실행하지 못한 검증</div>
+    <ul><li>없음</li></ul>
+
+    <div class="lbl">정적 점검</div>
+    <table>
+      <thead><tr><th>점검</th><th>실행 명령</th><th>결과</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>컴파일 경고</td><td><code>./gradlew.bat compileJava compileTestJava --warning-mode all --rerun-tasks</code></td><td><span class="chip pass">통과</span></td><td>경고 0건</td></tr>
+        <tr><td>린트 · 포매터</td><td>—</td><td><span class="chip skip">미설정</span></td><td>build.gradle 에 도구 없음, .editorconfig 없음. 탭 들여쓰기는 유지</td></tr>
+      </tbody>
+    </table>
+
+    <div class="lbl">테스트 커버리지</div>
+    <div class="top"><span>STS-05 가 취소 후 URL 과 목록 잔존을, OrderFlowTests.cancelKeepsOrderAndHistory 가 보존과 이력을 직접 단언합니다.</span><span class="chip pass">추가함</span></div>
+    <p class="src">implement 가 추가한 테스트: <code>OrderFlowTests.java</code>, <code>order-status.spec.ts</code> 수정. 직접 실행해 통과 확인</p>
+
+    <div class="lbl">변경한 파일 (4개)</div>
+    <ul><li><code>src/main/java/com/example/demo/service/OrderService.java</code></li><li><code>src/main/resources/static/js/order-detail.js</code></li><li><code>src/test/e2e/order-status.spec.ts</code></li><li><code>src/test/java/com/example/demo/OrderFlowTests.java</code></li></ul>
+  </section>
+
+  <h2><span class="no">4</span>결론</h2>
+  <section class="card">
+    <div><span class="chip pass">PASS</span> <span class="src">&nbsp;2026-10-22 13:33 · 1번째 라운드</span></div>
+    <p class="headline">취소는 주문과 이력을 남기고 상세 화면은 목록으로 이동합니다.</p>
+    <div class="lbl">요청</div>
+    <div class="quote">주문 취소 시 데이터를 삭제하지 않고 이력을 남길 수 있도록 수정해줘. 그리고 주문상세 화면에서 삭제 후 해당화면에 머무르고있으면서 주문내역이 없다고 표시하는 것보다 다시 목록화면으로 이동시키는게 좋을 것 같아.</div>
+    <div class="lbl">남은 이슈</div>
+    <ul><li>docs/INTENT.md 28, 41행이 아직 취소 시 삭제로 서술됨</li><li>이미 삭제된 주문은 복구 불가</li><li>이동 후 성공 메시지 미표시</li></ul>
+    <div class="lbl">다음에 할 일</div>
+    <div>변경 파일을 검토하고 INTENT.md 갱신 여부를 정한 뒤 커밋 여부를 결정하세요.</div>
+    <div class="lbl">자세히</div>
+    <div class="links"><a href="precheck.html">점검 페이지</a></div>
+  </section>
+
+  <details>
+    <summary>확인한 근거 (실행 출력 발췌)</summary>
+    <pre>gradlew test --rerun-tasks: BUILD SUCCESSFUL
+JUnit xml: tests=1 / 10 / 12 (합 23), skipped=0 failures=0 errors=0
+Playwright: ok 35 STS-05 주문 취소 (498ms) ... 45 passed (32.1s)
+compileJava compileTestJava: BUILD SUCCESSFUL, 경고 없음</pre>
+  </details>
+
+  <footer>report · TASK-003 · 구현 후 보고 증거</footer>
+</div>
+</body>
+</html>
