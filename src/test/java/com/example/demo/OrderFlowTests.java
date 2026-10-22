@@ -58,6 +58,30 @@ class OrderFlowTests {
 	}
 
 	@Test
+	void signedUpMemberCanLoginAndUseApis() throws Exception {
+		mvc.perform(get("/signup")).andExpect(status().isOk());
+		mvc.perform(post("/signup").param("username", "alice").param("password", "pw1234"))
+				.andExpect(status().isCreated());
+		mvc.perform(post("/signup").param("username", "alice").param("password", "pw1234"))
+				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").exists());
+		mvc.perform(post("/signup").param("username", " ").param("password", "pw1234"))
+				.andExpect(status().isBadRequest());
+		mvc.perform(post("/signup").param("username", "bob").param("password", "12"))
+				.andExpect(status().isBadRequest());
+		mvc.perform(post("/signup").param("username", "admin").param("password", "pw1234"))
+				.andExpect(status().isBadRequest());
+		mvc.perform(post("/login").param("username", "alice").param("password", "wrong"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.error").exists());
+		MockHttpSession s = new MockHttpSession();
+		mvc.perform(post("/login").param("username", "alice").param("password", "pw1234").session(s))
+				.andExpect(redirectedUrl("/orders"));
+		mvc.perform(post("/api/simulate").session(s).contentType(MediaType.APPLICATION_JSON)
+						.content("{\"orders\":" + ORDERS + "}"))
+				.andExpect(status().isOk());
+		mvc.perform(get("/master").session(s)).andExpect(status().isOk());
+	}
+
+	@Test
 	void pagesRender() throws Exception {
 		MockHttpSession s = login();
 		for (String url : new String[] {"/orders", "/orders/new", "/master"}) {
