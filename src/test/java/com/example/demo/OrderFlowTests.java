@@ -129,6 +129,53 @@ class OrderFlowTests {
 	}
 
 	@Test
+	void cancelKeepsOrderAndHistory() throws Exception {
+		MockHttpSession s = login();
+		long id = confirm(s);
+		var order = orderService.getOrder(id);
+
+		orderService.changeStatus(id, OrderStatus.CANCELED, order.getVersion(), "admin");
+
+		assertThat(orderService.getOrder(id).getStatus()).isEqualTo(OrderStatus.CANCELED);
+		var history = orderService.history(id);
+		assertThat(history).hasSize(2);
+		assertThat(history.get(1).getToStatus()).isEqualTo(OrderStatus.CANCELED);
+	}
+
+	@Test
+	void cancelInProgressOrderKeepsOrderAndHistory() throws Exception {
+		MockHttpSession s = login();
+		long id = confirm(s);
+		orderService.changeStatus(id, OrderStatus.IN_PROGRESS, orderService.getOrder(id).getVersion(), "admin");
+
+		orderService.changeStatus(id, OrderStatus.CANCELED, orderService.getOrder(id).getVersion(), "admin");
+
+		assertThat(orderService.getOrder(id).getStatus()).isEqualTo(OrderStatus.CANCELED);
+		var history = orderService.history(id);
+		assertThat(history).hasSize(3);
+		assertThat(history.get(2).getFromStatus()).isEqualTo(OrderStatus.IN_PROGRESS);
+		assertThat(history.get(2).getToStatus()).isEqualTo(OrderStatus.CANCELED);
+	}
+
+	@Test
+	void canceledOrderRejectsFurtherChanges() throws Exception {
+		MockHttpSession s = login();
+		long id = confirm(s);
+		orderService.changeStatus(id, OrderStatus.CANCELED, orderService.getOrder(id).getVersion(), "admin");
+		int historyCount = orderService.history(id).size();
+
+		for (OrderStatus target : new OrderStatus[] { OrderStatus.IN_PROGRESS, OrderStatus.COMPLETED,
+				OrderStatus.CANCELED }) {
+			long version = orderService.getOrder(id).getVersion();
+			assertThatThrownBy(() -> orderService.changeStatus(id, target, version, "admin"))
+					.isInstanceOf(BusinessException.class);
+		}
+
+		assertThat(orderService.getOrder(id).getStatus()).isEqualTo(OrderStatus.CANCELED);
+		assertThat(orderService.history(id)).hasSize(historyCount);
+	}
+
+	@Test
 	void confirmFailsWhenMasterChangedAfterSimulation() throws Exception {
 		MockHttpSession s = login();
 		mvc.perform(post("/api/orders").session(s).contentType(MediaType.APPLICATION_JSON)

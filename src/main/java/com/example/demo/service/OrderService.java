@@ -111,9 +111,6 @@ public class OrderService {
 			throw conflict();
 		}
 		histories.save(new OrderStatusHistory(id, from, target, user, LocalDateTime.now()));
-		if (target == OrderStatus.CANCELED) {
-			orders.delete(order);
-		}
 	}
 
 	private static BusinessException conflict() {
