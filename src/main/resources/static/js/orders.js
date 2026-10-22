@@ -20,13 +20,14 @@
 
 	const rows = document.getElementById('rows');
 	for (const o of data.orders) {
+		const over = o.dueDays != null && o.totalDays > o.dueDays;
 		const tr = h('tr', {class: 'clickable'},
 			h('td', null, h('a', {href: '/orders/' + o.id}, '#' + o.id)),
 			h('td', null, o.confirmedAt),
 			h('td', {class: 'num'}, fmt(o.totalK)),
 			h('td', null, o.routeLabel),
-			h('td', {class: 'num'}, o.totalDays),
-			h('td', {class: 'num'}, o.dueDays != null ? o.dueDays : '-'),
+			h('td', {class: 'num' + (over ? ' over-due' : '')}, o.totalDays),
+			h('td', {class: 'num' + (over ? ' over-due' : '')}, o.dueDays != null ? o.dueDays : '-'),
 			h('td', {class: 'num'}, o.totalCostEok),
 			h('td', null, h('span', {class: 'badge badge-' + o.status}, o.statusLabel)),
 			h('td', null, o.createdBy));

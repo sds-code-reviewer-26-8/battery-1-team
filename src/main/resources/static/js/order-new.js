@@ -189,6 +189,7 @@
 		const stored = currentStored();
 		PlanView.renderSummary(document.getElementById('summary'), stored);
 		PlanView.renderDetails(document.getElementById('details'), stored);
+		applyDue();
 		const animRoot = document.getElementById('anim');
 		if (!anim) {
 			anim = BatteryAnim.mount(animRoot, stored, {autoplay: true});

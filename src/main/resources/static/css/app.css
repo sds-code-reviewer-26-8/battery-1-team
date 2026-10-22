@@ -130,7 +130,8 @@ details summary { cursor: pointer; color: var(--primary); margin: 4px 0 8px; }
 .option strong { font-size: 15px; }
 .option.selected { border-color: var(--primary); background: #f0f6ff; }
 .option.over-due { border-color: var(--danger); color: var(--danger); }
-.option.over-due.selected { background: #fff1f0; }
+.option.over-due.selected { border-color: var(--danger); color: var(--danger); background: #fff1f0; }
+dd.over-due, td.over-due { color: var(--danger); font-weight: 700; }
 .due-note { font-weight: 700; }
 .stats b.over-due { color: var(--danger); }
 .due-row { align-items: center; gap: 16px; }

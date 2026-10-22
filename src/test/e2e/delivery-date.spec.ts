@@ -98,3 +98,74 @@ test.describe('주문 추가 — 납기일', () => {
     await expect(page).toHaveURL(/\/orders\/new$/);
   });
 });
+
+async function confirmWithDue(page: Page, due: number | null): Promise<string> {
+  await page.goto('/orders/new');
+  await runSimulation(page);
+  if (due !== null) {
+    await page.getByLabel('가능한 빨리').check();
+    await page.locator('#dueDays').fill(String(due));
+  }
+  await page.getByRole('button', { name: '주문 확정' }).click();
+  await expect(page).toHaveURL(/\/orders\/\d+$/);
+  return page.url().split('/').pop()!;
+}
+
+const RED = 'rgb(209, 52, 47)';
+
+test.describe('납기 초과 주문 빨간 표시', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('초과 주문은 목록과 상세에서 빨갛고, 이하·NULL은 빨갛지 않다', async ({ page }) => {
+    const over = await confirmWithDue(page, 5);
+    await expect(page.locator('#meta dd.over-due')).toHaveCSS('color', RED);
+    await expect(page.locator('#summary .stats b.over-due')).toHaveCount(1);
+    const ok = await confirmWithDue(page, 50);
+    await expect(page.locator('#meta dd.over-due')).toHaveCount(0);
+    await expect(page.locator('#summary .over-due')).toHaveCount(0);
+    const nul = await confirmWithDue(page, null);
+    await expect(page.locator('.over-due')).toHaveCount(0);
+
+    await page.goto('/orders');
+    const cells = (id: string) => page.locator('#rows tr', { has: page.locator(`a[href="/orders/${id}"]`) }).locator('td');
+    await expect(cells(over).nth(4)).toHaveClass(/over-due/);
+    await expect(cells(over).nth(5)).toHaveCSS('color', RED);
+    await expect(cells(ok).nth(4)).not.toHaveClass(/over-due/);
+    await expect(cells(nul).nth(5)).toHaveText('-');
+    await expect(cells(nul).nth(5)).not.toHaveClass(/over-due/);
+  });
+
+  test('선택한 경로 카드도 초과면 빨간 테두리·글자·연한 빨강 배경이다', async ({ page }) => {
+    await page.goto('/orders/new');
+    await runSimulation(page);
+    await page.getByLabel('가능한 빨리').check();
+    await page.locator('#dueDays').fill('5');
+    await page.locator('#options .option.over-due').first().click();
+    const card = page.locator('#options .option.selected');
+    await expect(card).toHaveCount(1);
+    await expect(card).toHaveClass(/over-due/);
+    await expect(card).toHaveClass(/selected/);
+    await expect(card).toHaveCSS('color', RED);
+    await expect(card).toHaveCSS('border-top-color', RED);
+    await expect(card).toHaveCSS('background-color', 'rgb(255, 241, 240)');
+  });
+
+  test('경계값: 소요 일수와 납기가 같으면 빨갛지 않고, 하루 짧으면 빨갛다', async ({ page }) => {
+    await page.goto('/orders/new');
+    await runSimulation(page);
+    const days = Number((await page.locator('#summary .stats b').nth(1).innerText()).replace(/\D/g, ''));
+    expect(days).toBeGreaterThanOrEqual(6);
+    expect(days).toBeLessThanOrEqual(50);
+    const same = await confirmWithDue(page, days);
+    await expect(page.locator('#meta dd.over-due')).toHaveCount(0);
+    await expect(page.locator('#summary .over-due')).toHaveCount(0);
+    const short = await confirmWithDue(page, days - 1);
+    await expect(page.locator('#meta dd.over-due')).toHaveCount(1);
+    await page.goto('/orders');
+    const cells = (id: string) => page.locator('#rows tr', { has: page.locator(`a[href="/orders/${id}"]`) }).locator('td');
+    await expect(cells(same).nth(5)).not.toHaveClass(/over-due/);
+    await expect(cells(short).nth(5)).toHaveClass(/over-due/);
+  });
+});

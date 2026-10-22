@@ -26,10 +26,11 @@
 		document.getElementById('orderBadge').className = 'badge badge-' + o.status;
 		document.getElementById('orderBadge').textContent = o.statusLabel;
 
-		const meta = (label, value) => h('div', null, h('dt', null, label), h('dd', null, value));
+		const over = o.dueDays != null && o.plan.plan.totalDays > o.dueDays;
+		const meta = (label, value, cls) => h('div', null, h('dt', null, label), h('dd', cls ? {class: cls} : null, value));
 		document.getElementById('meta').replaceChildren(
 			meta('확정 일시', o.confirmedAt), meta('작성자', o.createdBy), meta('경로', o.routeLabel),
-			meta('납기', o.dueDays != null ? o.dueDays + '일' : '-'), meta('메모', o.memo != null ? o.memo : '-'));
+			meta('납기', o.dueDays != null ? o.dueDays + '일' + (over ? ' (초과)' : '') : '-', over ? 'over-due' : null), meta('메모', o.memo != null ? o.memo : '-'));
 
 		const actions = document.getElementById('actions');
 		actions.replaceChildren();
@@ -53,6 +54,7 @@
 		if (!planShown) {
 			planShown = true;
 			PlanView.renderSummary(document.getElementById('summary'), o.plan);
+			if (over) document.querySelectorAll('#summary .stats b')[1].classList.add('over-due');
 			PlanView.renderDetails(document.getElementById('details'), o.plan);
 			BatteryAnim.mount(document.getElementById('anim'), o.plan, {autoplay: false});
 		}
