@@ -169,6 +169,55 @@ class OrderFlowTests {
 				.content("{\"customerName\":" + nameJson + ",\"version\":" + version + "}"));
 	}
 
+	private org.springframework.test.web.servlet.ResultActions confirmRaw(MockHttpSession s, String customerFragment)
+			throws Exception {
+		MvcResult sim = mvc.perform(post("/api/simulate").session(s).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"orders\":" + ORDERS + "}")).andReturn();
+		int version = com.jayway.jsonpath.JsonPath.read(sim.getResponse().getContentAsString(), "$.master.version");
+		return mvc.perform(post("/api/orders").session(s).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"orders\":" + ORDERS + ",\"routeType\":\"FAST\",\"masterVersion\":" + version
+						+ customerFragment + "}"));
+	}
+
+	@Test
+	@DisplayName("고객사 이름의 앞뒤 공백은 제거하고, 공백뿐이면 null로 확정된다")
+	void confirmTrimsCustomerNameAndBlankBecomesNull() throws Exception {
+		MockHttpSession s = login();
+		long trimmed = confirmWithCustomer(s, ",\"customerName\":\"  ACME  \"");
+		long blank = confirmWithCustomer(s, ",\"customerName\":\"   \"");
+
+		mvc.perform(get("/api/orders/" + trimmed).session(s)).andExpect(jsonPath("$.customerName").value("ACME"));
+		mvc.perform(get("/api/orders/" + blank).session(s)).andExpect(jsonPath("$.customerName").value(nullValue()));
+	}
+
+	@Test
+	@DisplayName("고객사 이름은 100자까지 확정되고, 101자는 400으로 거부된다")
+	void confirmCustomerNameLengthLimit() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, ",\"customerName\":\"" + "가".repeat(100) + "\"");
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value("가".repeat(100)));
+
+		confirmRaw(s, ",\"customerName\":\"" + "가".repeat(101) + "\"")
+				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").exists());
+	}
+
+	@Test
+	@DisplayName("고객사 이름 수정도 공백을 제거하고, 공백뿐이면 null이 되며, 101자는 거부되고 기존 이름이 유지된다")
+	void editCustomerNameNormalizesAndLimitsLength() throws Exception {
+		MockHttpSession s = login();
+		long id = confirmWithCustomer(s, ",\"customerName\":\"OLD\"");
+
+		editCustomer(s, id, "  NEW  ", orderService.getOrder(id).getVersion()).andExpect(status().isOk());
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value("NEW"));
+
+		editCustomer(s, id, "가".repeat(101), orderService.getOrder(id).getVersion())
+				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").exists());
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value("NEW"));
+
+		editCustomer(s, id, "   ", orderService.getOrder(id).getVersion()).andExpect(status().isOk());
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.customerName").value(nullValue()));
+	}
+
 	@Test
 	@DisplayName("[기준3] 확정 주문의 고객사 이름을 주문 version과 함께 수정하면 반영되고 주문 version이 증가한다")
 	void editCustomerNameOfConfirmedOrderSucceeds() throws Exception {

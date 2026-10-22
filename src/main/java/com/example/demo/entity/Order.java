@@ -48,6 +48,7 @@ public class Order {
 	@Column(length = 1000)
 	private String memo;
 
+	@Column(length = 100)
 	private String customerName;
 
 	/** 확정 시점의 계획 스냅샷(주문 수량, 마스터 값, 경로, 일별 생산) JSON */

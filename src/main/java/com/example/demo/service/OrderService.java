@@ -22,6 +22,7 @@ import tools.jackson.databind.ObjectMapper;
 public class OrderService {
 
 	private static final int MAX_MEMO = 1000;
+	private static final int MAX_CUSTOMER_NAME = 100;
 
 	private final SimulationService simulationService;
 	private final OrderRepository orders;
@@ -61,7 +62,8 @@ public class OrderService {
 		int totalK = result.orders().values().stream().mapToInt(Integer::intValue).sum();
 		LocalDateTime now = LocalDateTime.now();
 		Order order = orders.save(new Order(now, user, totalK, plan.type(), plan.label(), plan.totalDays(),
-				plan.productionCost(), plan.shippingCost(), plan.totalCost(), note, customerName, json.writeValueAsString(stored)));
+				plan.productionCost(), plan.shippingCost(), plan.totalCost(), note, normalizeCustomerName(customerName),
+				json.writeValueAsString(stored)));
 		histories.save(new OrderStatusHistory(order.getId(), null, OrderStatus.CONFIRMED, user, now));
 		return order;
 	}
@@ -118,6 +120,7 @@ public class OrderService {
 	 */
 	@Transactional
 	public void changeCustomerName(Long id, String customerName, long expectedVersion) {
+		String name = normalizeCustomerName(customerName);
 		Order order = getOrder(id);
 		if (order.getVersion() != expectedVersion) {
 			throw conflict();
@@ -125,12 +128,21 @@ public class OrderService {
 		if (order.getStatus().next().isEmpty()) {
 			throw new BusinessException("%s 상태의 주문은 고객사 이름을 바꿀 수 없습니다".formatted(order.getStatus().getLabel()));
 		}
-		order.setCustomerName(customerName);
+		order.setCustomerName(name);
 		try {
 			orders.saveAndFlush(order);
 		} catch (ObjectOptimisticLockingFailureException e) {
 			throw conflict();
 		}
+	}
+
+	/** 앞뒤 공백을 제거하고, 비면 null, 100자를 넘으면 거부한다. */
+	private static String normalizeCustomerName(String customerName) {
+		String name = customerName == null ? null : customerName.strip();
+		if (name != null && name.length() > MAX_CUSTOMER_NAME) {
+			throw new BusinessException("고객사 이름은 %d자 이하로 입력하세요".formatted(MAX_CUSTOMER_NAME));
+		}
+		return name == null || name.isEmpty() ? null : name;
 	}
 
 	private static BusinessException conflict() {
