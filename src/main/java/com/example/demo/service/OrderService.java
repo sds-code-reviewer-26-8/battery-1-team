@@ -97,21 +97,14 @@ public class OrderService {
 	 */
 	@Transactional
 	public void changeStatus(Long id, OrderStatus target, long expectedVersion, String user) {
-		Order order = getOrder(id);
-		if (order.getVersion() != expectedVersion) {
-			throw conflict();
-		}
+		Order order = loadForUpdate(id, expectedVersion);
 		if (!order.getStatus().canChangeTo(target)) {
 			throw new BusinessException("%s 상태에서는 %s(으)로 바꿀 수 없습니다"
 					.formatted(order.getStatus().getLabel(), target.getLabel()));
 		}
 		OrderStatus from = order.getStatus();
 		order.setStatus(target);
-		try {
-			orders.saveAndFlush(order);
-		} catch (ObjectOptimisticLockingFailureException e) {
-			throw conflict();
-		}
+		saveOrConflict(order);
 		histories.save(new OrderStatusHistory(id, from, target, user, LocalDateTime.now()));
 	}
 
@@ -121,14 +114,25 @@ public class OrderService {
 	@Transactional
 	public void changeCustomerName(Long id, String customerName, long expectedVersion) {
 		String name = normalizeCustomerName(customerName);
-		Order order = getOrder(id);
-		if (order.getVersion() != expectedVersion) {
-			throw conflict();
-		}
+		Order order = loadForUpdate(id, expectedVersion);
 		if (!order.getStatus().isEditable()) {
 			throw new BusinessException("%s 상태의 주문은 고객사 이름을 바꿀 수 없습니다".formatted(order.getStatus().getLabel()));
 		}
 		order.setCustomerName(name);
+		saveOrConflict(order);
+	}
+
+	/** 주문을 조회하고, 화면에서 본 version 과 다르면(= 그 사이 다른 사람이 바꿈) 충돌로 거부한다. */
+	private Order loadForUpdate(Long id, long expectedVersion) {
+		Order order = getOrder(id);
+		if (order.getVersion() != expectedVersion) {
+			throw conflict();
+		}
+		return order;
+	}
+
+	/** 저장하면서 동시 수정으로 낙관적 락이 깨지면 충돌로 거부한다. */
+	private void saveOrConflict(Order order) {
 		try {
 			orders.saveAndFlush(order);
 		} catch (ObjectOptimisticLockingFailureException e) {
