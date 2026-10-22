@@ -12,6 +12,7 @@ const PlanView = (function () {
 					<div><span>소요 일수</span><b>${p.totalDays}일</b></div>
 					<div><span>생산 원가</span><b>${eok(p.productionCost)}억원</b></div>
 					<div><span>운항비</span><b>${eok(p.shippingCost)}억원</b></div>
+					<div><span>운영비</span><b>${p.operatingCost == null ? '-' : eok(p.operatingCost) + '억원'}</b></div>
 					<div class="strong"><span>총 비용</span><b>${eok(p.totalCost)}억원</b></div>
 				</div>
 			</section>`;
@@ -22,11 +23,13 @@ const PlanView = (function () {
 	}
 
 	function ordersTable(stored) {
+		const days = stored.plan.operatingDays;
 		const rows = FACTORY_ORDER.map(c => `
 			<tr><td>${COUNTRY_LABEL[c]}</td><td class="num">${fmt(stored.orders[c] || 0)}</td>
-			<td class="num">${stored.visits[c] || 0}회</td></tr>`).join('');
+			<td class="num">${stored.visits[c] || 0}회</td>
+			<td class="num">${days ? (days[c] || 0) + '일' : '-'}</td></tr>`).join('');
 		return `<h2>나라별 주문 수량</h2>
-			<table class="grid"><thead><tr><th>나라</th><th class="num">주문 수량(K)</th><th class="num">필요 방문 횟수</th></tr></thead>
+			<table class="grid"><thead><tr><th>나라</th><th class="num">주문 수량(K)</th><th class="num">필요 방문 횟수</th><th class="num">공장 운영일수</th></tr></thead>
 			<tbody>${rows}</tbody></table>`;
 	}
 
@@ -72,13 +75,14 @@ const PlanView = (function () {
 	function masterTable(stored) {
 		const m = stored.master;
 		const factories = m.factories.map(f => `<tr><td>${COUNTRY_LABEL[f.country]}</td>
-			<td class="num">${fmt(f.maxDaily)}</td><td class="num">${fmt(f.stockLimit)}</td><td class="num">${fmt(f.unitCost)}</td></tr>`).join('');
+			<td class="num">${fmt(f.maxDaily)}</td><td class="num">${fmt(f.stockLimit)}</td><td class="num">${fmt(f.unitCost)}</td>
+			<td class="num">${f.operatingDailyCostWon ? eok(f.operatingDailyCostWon) + '억원' : '-'}</td></tr>`).join('');
 		const routes = m.routes.map(r => `<tr><td>${COUNTRY_LABEL[r.from]} - ${COUNTRY_LABEL[r.to]}</td>
 			<td class="num">${r.days}일</td></tr>`).join('');
 		return `<h2>계획에 쓴 마스터 값</h2>
 			<details><summary>보기</summary>
 			<p>배 ${m.shipCount}척 · 척당 일 운항비 ${eok(m.shipDailyCostWon)}억원</p>
-			<table class="grid"><thead><tr><th>나라</th><th class="num">하루 최대(K)</th><th class="num">재고 상한(K)</th><th class="num">셀당 원가(원)</th></tr></thead>
+			<table class="grid"><thead><tr><th>나라</th><th class="num">하루 최대(K)</th><th class="num">재고 상한(K)</th><th class="num">셀당 원가(원)</th><th class="num">하루 운영비</th></tr></thead>
 			<tbody>${factories}</tbody></table>
 			<table class="grid"><thead><tr><th>항로</th><th class="num">항해 일수</th></tr></thead><tbody>${routes}</tbody></table>
 			</details>`;

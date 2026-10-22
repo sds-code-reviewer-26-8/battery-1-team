@@ -9,11 +9,13 @@
 		const factories = h('section', {class: 'card'}, h('h2', null, '공장'),
 			h('table', {class: 'grid'},
 				h('thead', null, h('tr', null, h('th', null, '나라'), h('th', null, '하루 최대 생산량(K)'),
-					h('th', null, '재고 상한(K)'), h('th', null, '셀당 원가(원)'))),
+					h('th', null, '재고 상한(K)'), h('th', null, '셀당 원가(원)'), h('th', null, '하루 운영비(억 원)'))),
 				h('tbody', null, data.factories.map(c => h('tr', null, h('td', null, c.label),
 					h('td', null, num('maxDaily_' + c.name, f['maxDaily_' + c.name])),
 					h('td', null, num('stockLimit_' + c.name, f['stockLimit_' + c.name])),
-					h('td', null, num('unitCost_' + c.name, f['unitCost_' + c.name])))))));
+					h('td', null, num('unitCost_' + c.name, f['unitCost_' + c.name])),
+					h('td', null, h('input', {type: 'text', inputmode: 'decimal', name: 'operatingDailyCost_' + c.name,
+						value: f['operatingDailyCost_' + c.name]})))))));
 
 		const ships = h('section', {class: 'card'}, h('h2', null, '선박'),
 			h('div', {class: 'row'},

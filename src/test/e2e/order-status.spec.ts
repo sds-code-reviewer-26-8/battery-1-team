@@ -23,7 +23,7 @@ test('STS-01 상세 화면 구성 (확정 상태)', async ({ page }) => {
   await expect(statusBadge(page)).toHaveText('확정');
   await expect(metaValue(page, '확정 일시')).not.toBeEmpty();
   await expect(metaValue(page, '작성자')).toHaveText('admin');
-  await expect(metaValue(page, '경로')).toHaveText('운항비 최소');
+  await expect(metaValue(page, '경로')).toHaveText('총비용 최소');
   await expect(metaValue(page, '메모')).toHaveText('STS-01');
 
   // 확정 상태에서는 고객사 이름을 수정할 수 있다

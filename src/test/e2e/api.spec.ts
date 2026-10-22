@@ -62,6 +62,6 @@ test.describe('API', () => {
     await page.goto(`/orders/${id}`);
     const stats = page.locator('#summary .stats');
     await expect(stats.locator('div', { hasText: '총 수량' })).toContainText('400K');
-    await expect(stats.locator('div', { hasText: '총 비용' })).toContainText('4.80억원'); // 운항비 2억 + 생산비 2.8억
+    await expect(stats.locator('div', { hasText: '총 비용' })).toContainText('14.80억원'); // 운항비 2억 + 생산비 2.8억 + 운영비 10억(1일)
   });
 });
