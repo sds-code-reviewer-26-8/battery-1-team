@@ -4,14 +4,14 @@
 
 | 테스트 | 개수 | 테스트 도구 |
 |---|:-:|---|
-| Unit Test | __개 | ___ |
-| Slice Test | __개 | ___ |
-| 통합 테스트 | __개 | ___ |
-| E2E 테스트 | __개 | ___ |
-| Robustness 테스트 | __개 | ___ |
-| Stress 테스트 | __개 | ___ |
-| 성능 테스트 | __개 | ___ |
-| Test Coverage | __% | ___ |
+| Unit Test | 20개 | JUnit 5 (`PlannerTest` 19, `OrderStatusTest` 1) |
+| Slice Test | 0개 | - |
+| 통합 테스트 | 46개 | Spring Boot Test + MockMvc (`OrderFlowTests` 37, `DueDaysTest` 8, `DemoApplicationTests` 1) |
+| E2E 테스트 | 67개 | Playwright (chromium, 14개 spec 파일) |
+| Robustness 테스트 | 0개 | - |
+| Stress 테스트 | 2개 plan | Apache JMeter (단계별 부하, 동시성 경합) |
+| 성능 테스트 | 1개 plan | Apache JMeter (기준선) |
+| Test Coverage | 91.7% | JaCoCo (Java 테스트 기준 라인 커버리지, 브랜치 89.9%) |
 
 <br>
 
