@@ -6,6 +6,7 @@ import com.example.demo.entity.Order;
 import com.example.demo.entity.OrderStatus;
 import com.example.demo.entity.OrderStatusHistory;
 import com.example.demo.service.BusinessException;
+import com.example.demo.service.DueDays;
 import com.example.demo.service.OrderService;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
@@ -30,7 +31,10 @@ import tools.jackson.databind.ObjectMapper;
 public class OrderController {
 
 	public record ConfirmRequest(Map<Country, Integer> orders, String routeType, long masterVersion, String memo,
-			String customerName) {
+			String customerName, JsonNode dueDays) {
+	}
+
+	public record DueRule(int min, int max, String message) {
 	}
 
 	public record StatusRequest(OrderStatus status, long version) {
@@ -47,7 +51,7 @@ public class OrderController {
 
 	public record OrderRow(Long id, String confirmedAt, int totalK, String routeLabel, int totalDays,
 			String totalCostEok, String status, String statusLabel, String createdBy,
-			String customerName) {
+			String customerName, Integer dueDays) {
 	}
 
 	public record OrderList(List<OrderRow> orders, Map<OrderStatus, Long> counts, int total,
@@ -59,7 +63,7 @@ public class OrderController {
 
 	public record OrderDetail(Long id, String status, String statusLabel, List<StatusOption> next,
 			String confirmedAt, String createdBy, String routeLabel, String memo, String customerName, boolean editable, long version, JsonNode plan,
-			List<HistoryRow> history) {
+			List<HistoryRow> history, Integer dueDays) {
 	}
 
 	private static final DateTimeFormatter MINUTE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -96,6 +100,12 @@ public class OrderController {
 				Arrays.stream(OrderStatus.values()).map(StatusOption::of).toList());
 	}
 
+	@GetMapping("/api/orders/due-rule")
+	@ResponseBody
+	public DueRule dueRule() {
+		return new DueRule(DueDays.MIN, DueDays.MAX, DueDays.MESSAGE);
+	}
+
 	@GetMapping("/api/orders/{id}")
 	@ResponseBody
 	public ResponseEntity<?> detail(@PathVariable Long id) {
@@ -105,7 +115,7 @@ public class OrderController {
 			return ResponseEntity.ok(new OrderDetail(o.getId(), o.getStatus().name(), o.getStatus().getLabel(),
 					o.getStatus().next().stream().map(StatusOption::of).toList(), format(o.getConfirmedAt(), MINUTE),
 					o.getCreatedBy(), o.getRouteLabel(), o.getMemo(), o.getCustomerName(), o.getStatus().isEditable(), o.getVersion(),
-					json.readTree(o.getPlanJson()), history));
+					json.readTree(o.getPlanJson()), history, o.getDueDays()));
 		} catch (BusinessException e) {
 			return ApiErrors.of(e);
 		} catch (JacksonException e) {
@@ -141,9 +151,18 @@ public class OrderController {
 	@PostMapping("/api/orders")
 	@ResponseBody
 	public ResponseEntity<?> confirm(@RequestBody ConfirmRequest request, HttpSession session) {
+		JsonNode due = request.dueDays();
+		Integer dueDays = null;
+		if (due != null && !due.isNull()) {
+			// 납기는 정수만 받는다. 7.5 를 7 로, "10" 을 10 으로 바꿔 저장하지 않고 거부한다.
+			if (!due.isIntegralNumber() || !due.canConvertToInt()) {
+				return ResponseEntity.badRequest().body(Map.of("error", DueDays.MESSAGE, "conflict", false));
+			}
+			dueDays = due.intValue();
+		}
 		try {
 			Order order = service.confirm(request.orders(), request.routeType(), request.masterVersion(),
-					request.memo(), request.customerName(), (String) session.getAttribute(LoginInterceptor.SESSION_USER));
+					request.memo(), request.customerName(), dueDays, (String) session.getAttribute(LoginInterceptor.SESSION_USER));
 			return ResponseEntity.ok(Map.of("id", order.getId()));
 		} catch (BusinessException e) {
 			return ApiErrors.of(e);
@@ -153,7 +172,7 @@ public class OrderController {
 	private static OrderRow toRow(Order o) {
 		return new OrderRow(o.getId(), format(o.getConfirmedAt(), MINUTE), o.getTotalK(), o.getRouteLabel(),
 				o.getTotalDays(), o.getTotalCostEok(), o.getStatus().name(), o.getStatus().getLabel(),
-				o.getCreatedBy(), o.getCustomerName());
+				o.getCreatedBy(), o.getCustomerName(), o.getDueDays());
 	}
 
 	private static HistoryRow toHistoryRow(OrderStatusHistory h) {

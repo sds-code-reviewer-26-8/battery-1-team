@@ -77,8 +77,9 @@ test.describe('공장 운영비', () => {
     expect(Math.abs(total - (production + shipping + eokNumber(operatingText)))).toBeLessThanOrEqual(0.011);
 
     await page.goto('/orders');
+    await expect(page.getByRole('link', { name: `#${id}`, exact: true })).toBeVisible();
     const cells = await listRowCells(page, id);
-    expect(cells[5]).toBe(total.toFixed(2));
+    expect(cells[6]).toBe(total.toFixed(2)); // 총 비용(억원)
   });
 
   test('OPC-05 운영비가 없던 때 확정된 주문은 상세 운영비가 -, 총 비용은 저장값 그대로', async ({ page }) => {

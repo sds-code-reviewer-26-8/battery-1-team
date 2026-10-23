@@ -458,6 +458,73 @@ class OrderFlowTests {
 		assertThat(orderService.history(id)).hasSize(historyCount);
 	}
 
+	private org.springframework.test.web.servlet.ResultActions confirmWith(MockHttpSession s, String dueField)
+			throws Exception {
+		MvcResult sim = mvc.perform(post("/api/simulate").session(s).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"orders\":" + ORDERS + "}")).andReturn();
+		int version = com.jayway.jsonpath.JsonPath.read(sim.getResponse().getContentAsString(), "$.master.version");
+		return mvc.perform(post("/api/orders").session(s).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"orders\":" + ORDERS + ",\"routeType\":\"FAST\",\"masterVersion\":" + version
+						+ dueField + "}"));
+	}
+
+	@Test
+	void dueDaysIsSavedAndShownInDetailAndList() throws Exception {
+		MockHttpSession s = login();
+		for (int due : new int[] {5, 50}) {
+			MvcResult res = confirmWith(s, ",\"dueDays\":" + due).andExpect(status().isOk()).andReturn();
+			Integer id = com.jayway.jsonpath.JsonPath.read(res.getResponse().getContentAsString(), "$.id");
+			assertThat(orderService.getOrder(id.longValue()).getDueDays()).isEqualTo(due);
+			mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.dueDays").value(due));
+			mvc.perform(get("/api/orders").session(s)).andExpect(jsonPath("$.orders[0].dueDays").value(due));
+		}
+	}
+
+	@Test
+	void dueDaysIsNullWhenOmittedOrNull() throws Exception {
+		MockHttpSession s = login();
+		long id = confirm(s);
+		assertThat(orderService.getOrder(id).getDueDays()).isNull();
+		mvc.perform(get("/api/orders/" + id).session(s)).andExpect(jsonPath("$.dueDays").doesNotExist());
+		MvcResult res = confirmWith(s, ",\"dueDays\":null").andExpect(status().isOk()).andReturn();
+		Integer id2 = com.jayway.jsonpath.JsonPath.read(res.getResponse().getContentAsString(), "$.id");
+		assertThat(orderService.getOrder(id2.longValue()).getDueDays()).isNull();
+	}
+
+	@Test
+	void dueDaysOutOfRangeIsRejected() throws Exception {
+		MockHttpSession s = login();
+		long before = orderService.listOrders(null).size();
+		for (int due : new int[] {4, 51}) {
+			confirmWith(s, ",\"dueDays\":" + due).andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.error").exists());
+		}
+		assertThat(orderService.listOrders(null)).hasSize((int) before);
+	}
+
+	@Test
+	void dueDaysNonIntegerIsRejected() throws Exception {
+		MockHttpSession s = login();
+		long before = orderService.listOrders(null).size();
+		for (String due : new String[] {"7.5", "\"10\"", "1e1", "10.0", "true"}) {
+			confirmWith(s, ",\"dueDays\":" + due).andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.error").exists());
+		}
+		assertThat(orderService.listOrders(null)).hasSize((int) before);
+	}
+
+	@Test
+	void dueDaysDoesNotChangeServerCalculation() throws Exception {
+		MockHttpSession s = login();
+		MvcResult a = confirmWith(s, ",\"dueDays\":5").andExpect(status().isOk()).andReturn();
+		MvcResult b = confirmWith(s, "").andExpect(status().isOk()).andReturn();
+		var oa = orderService.getOrder(((Integer) com.jayway.jsonpath.JsonPath.read(a.getResponse().getContentAsString(), "$.id")).longValue());
+		var ob = orderService.getOrder(((Integer) com.jayway.jsonpath.JsonPath.read(b.getResponse().getContentAsString(), "$.id")).longValue());
+		assertThat(oa.getTotalCost()).isEqualTo(ob.getTotalCost());
+		assertThat(oa.getTotalDays()).isEqualTo(ob.getTotalDays());
+		assertThat(oa.getRouteLabel()).isEqualTo(ob.getRouteLabel());
+	}
+
 	@Test
 	void confirmFailsWhenMasterChangedAfterSimulation() throws Exception {
 		MockHttpSession s = login();

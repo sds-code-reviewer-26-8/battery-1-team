@@ -8,7 +8,7 @@ const chip = (page: Page, label: string) => page.locator('.filters .chip', { has
 const chipCount = async (page: Page, label: string) =>
 	Number((await chip(page, label).locator('.count').innerText()).trim());
 const dataRows = (page: Page) => page.locator('table.grid tbody tr.clickable');
-const statusCells = (page: Page) => page.locator('table.grid tbody tr.clickable td:nth-child(7)');
+const statusCells = (page: Page) => page.locator('table.grid tbody tr.clickable td:nth-child(8)');
 
 // LIST-01 목록 화면 구성
 test.describe('LIST-01 목록 화면 구성', () => {
@@ -35,7 +35,7 @@ test.describe('LIST-01 목록 화면 구성', () => {
 
 	test('LIST-01-TC03 주문 표의 열 구성', async ({ page }) => {
 		await expect(page.locator('table.grid thead th')).toHaveText([
-			'주문번호', '확정 일시', '총 수량(K)', '경로', '소요 일수', '총 비용(억원)', '상태', '고객사', '작성자',
+			'주문번호', '확정 일시', '총 수량(K)', '경로', '소요 일수', '납기(일)', '총 비용(억원)', '상태', '고객사', '작성자',
 		]);
 	});
 });

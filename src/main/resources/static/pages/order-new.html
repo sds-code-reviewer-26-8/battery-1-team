@@ -18,6 +18,12 @@
 			<p class="muted hint">게이지를 움직이면 바로 오른쪽 나라가 반대로 조정되고, 맨 오른쪽은 맨 왼쪽이 조정됩니다.
 				합계는 항상 총 생산 필요 수와 같습니다.</p>
 		</div>
+		<div class="row due-row">
+			<label class="inline"><input type="checkbox" id="asap"> 가능한 빨리</label>
+			<label id="dueWrap" hidden>납기일(일)
+				<input type="number" id="dueDays" step="1"></label>
+		</div>
+		<p id="dueError" class="alert error" hidden></p>
 		<div id="gauges" class="gauges"></div>
 		<p id="inputError" class="alert error" hidden></p>
 		<button type="button" id="runBtn" class="primary">시뮬레이션 실행</button>

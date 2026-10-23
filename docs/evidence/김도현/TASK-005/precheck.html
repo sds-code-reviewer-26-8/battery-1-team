@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>사전 점검 보고서</title>
+<style>
+  :root {
+    --bg: #f5f7fa; --card: #ffffff; --text: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --accent: #2563eb; --accent-soft: #dbeafe;
+    --ok: #15803d; --ok-soft: #dcfce7; --warn: #b45309; --warn-soft: #fef3c7;
+    --bad: #b91c1c; --bad-soft: #fee2e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111827; --card: #1f2937; --text: #f3f4f6; --muted: #9ca3af; --line: #374151;
+      --accent: #60a5fa; --accent-soft: #1e3a5f;
+      --ok: #4ade80; --ok-soft: #14532d; --warn: #fbbf24; --warn-soft: #78350f;
+      --bad: #f87171; --bad-soft: #7f1d1d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.6;
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; }
+  header, main { max-width: 900px; margin: 0 auto; padding: 0 16px; }
+  header { padding-top: 24px; }
+  main { padding-bottom: 32px; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 10px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .step { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none; }
+  .badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .badge.READY, .badge.low, .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.HILP, .badge.high, .badge.conflict { background: var(--bad-soft); color: var(--bad); }
+  .badge.mid, .badge.change { background: var(--warn-soft); color: var(--warn); }
+  .badge.add, .badge.none { background: var(--accent-soft); color: var(--accent); }
+  .meta { color: var(--muted); font-size: 13px; }
+  .label { color: var(--muted); font-size: 12px; margin: 12px 0 2px; }
+  ul { margin: 4px 0; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  code { font-family: Consolas, "D2Coding", monospace; font-size: 13px; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+  .req { white-space: pre-wrap; background: var(--bg); border-radius: 8px; padding: 10px 12px; margin: 8px 0 0; }
+  .none-text { color: var(--muted); }
+
+  /* 판정 */
+  .verdict { border-width: 2px; }
+  .verdict.READY { border-color: var(--ok); }
+  .verdict.HILP { border-color: var(--bad); }
+  .verdict-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .verdict-dot { width: 22px; height: 22px; border-radius: 50%; flex: none; }
+  .verdict-dot.READY { background: var(--ok); }
+  .verdict-dot.HILP { background: var(--bad); }
+  .verdict-name { font-size: 20px; font-weight: 800; }
+  .verdict-name.READY { color: var(--ok); }
+  .verdict-name.HILP { color: var(--bad); }
+  .verdict-reason { font-size: 17px; font-weight: 700; margin: 10px 0 0; }
+  .prev { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 8px 12px; margin-top: 10px; font-size: 14px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  @media (max-width: 600px) { .pair { grid-template-columns: 1fr; } }
+  .pair > div { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+  .pair b { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .overall { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-weight: 700; }
+  .risk { border-left: 4px solid var(--bad); background: var(--bad-soft); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+  .risk b { color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>사전 점검 보고서</h1>
+  <p class="sub" id="sub">구현 전에 요청의 이해, 현재 상태, 영향 범위, 위험을 점검한 요약입니다.</p>
+</header>
+<main id="view"></main>
+
+<script>
+// 보고서 한 건. prepare 가 실행할 때마다 이 자리에 JSON 을 넣어 새 HTML 을 만든다.
+var report = {"id":"TASK-005","createdAt":"2026-10-22 18:50","verdict":{"status":"READY","reason":"동작을 바꾸지 않는 리팩토링이며 범위가 작고 INTENT와 충돌하지 않는다."},"request":"납기 범위 5·50과 오류 문구의 중복을 한 곳으로 모으고, OrderDetail 레코드의 dueDays 위치를 끝으로 옮긴다.","understanding":{"background":"납기 5~50이 order-new.html(min/max), order-new.js(dueLimit, 오류 문구 2곳), OrderService 상수·문구, OrderController 오류 문구에 따로 적혀 있어 한 곳만 고치면 어긋난다. OrderDetail 레코드는 dueDays(Integer)가 memo(String)와 version(long) 사이에 있어 위치 기반 생성자에서 순서 실수 위험이 있다.","purpose":"범위·문구를 단일 출처로 모으고 레코드 인자 순서를 안전하게 해, 나중에 납기 규칙을 바꿀 때 누락·오류를 막는다. 외부 동작(범위, 문구, API 필드 이름·값)은 그대로다."},"checks":[{"item":"현재 브랜치","result":"feature/required-delivery-date","command":"git branch --show-current"},{"item":"base","result":"main, 기준 커밋 40b0855. main보다 11 커밋 앞서고 19 커밋 뒤처짐","command":"git merge-base HEAD origin/main; git rev-list --left-right --count origin/main...HEAD"},{"item":"원격 동기화","result":"원격 브랜치와 같음, 커밋되지 않은 변경 없음","command":"git fetch; git status -sb"},{"item":"baseline 테스트","result":"gradlew test 통과. Playwright E2E 56개 전부 통과(앱이 localhost:8080에 떠 있었음, 실행 중인 앱의 빌드 시점은 확인하지 못함)","command":"./gradlew test; npx playwright test"}],"prdDiff":[],"impact":{"overall":{"level":"낮음","reason":"파일 6개 안팎, 동작 불변. 다만 화면이 범위를 서버에서 가져오는 구조라 화면 초기화 흐름이 바뀌는 점은 주의."},"areas":[{"area":"화면","level":"낮음","note":"order-new.html의 min/max 하드코딩 제거, order-new.js가 범위·문구를 받아 사용"},{"area":"서비스","level":"낮음","note":"OrderService 상수·문구를 공용 정의로 대체"},{"area":"계산 로직","level":"없음","note":"Planner·시뮬레이션은 건드리지 않음(납기는 계산에 영향 없음)"},{"area":"DB·데이터","level":"없음","note":"Order 엔티티·저장값 불변. API 응답 JSON은 필드 순서가 아니라 이름 기반이라 동일(추정: Jackson 레코드 직렬화)"},{"area":"테스트","level":"낮음","note":"delivery-date.spec.ts가 min/max 속성과 문구를 검사하므로 초기화 지연 시 타이밍 영향 가능"}],"direct":[{"item":"service/DueDays(신규) 또는 동등한 단일 정의","change":"MIN 5, MAX 50, 오류 문구 생성을 한 곳에 둔다"},{"item":"OrderService.java","change":"MIN_DUE_DAYS/MAX_DUE_DAYS와 문구를 공용 정의로 교체"},{"item":"OrderController.java","change":"하드코딩 문구를 공용 정의로 교체, OrderDetail의 dueDays를 마지막 인자로 이동, 범위 조회 API 추가"},{"item":"order-new.js","change":"5·50과 문구 2곳을 서버가 준 값 사용으로 교체"},{"item":"pages/order-new.html","change":"min=5 max=50 하드코딩 제거, 스크립트가 설정"}],"indirect":[{"item":"OrderController.detail()","reason":"new OrderDetail(...) 호출 인자 순서가 바뀜(유일한 생성 위치)"},{"item":"order-detail.js","reason":"o.dueDays를 이름으로 읽으므로 영향 없음 확인 필요(추정)"},{"item":"문구 마침표","reason":"현재 컨트롤러 문구는 마침표 있음, 서비스 문구는 없음. 하나로 통일하면 서비스 경로 오류 문구가 달라짐"}],"tests":[{"file":"src/test/e2e/delivery-date.spec.ts","note":"min/max 속성과 오류 문구를 검사. 값이 같으면 수정 불필요하나 확인 필요"},{"file":"src/test/java/com/example/demo/OrderFlowTests.java","note":"dueDays 저장·표시 검증. 문구 통일 시 문구 단언 여부 확인(현재 '정수로' 문구 검사는 없음)"}],"intent":[]},"risks":[{"title":"화면이 범위를 서버에서 가져오면 비동기 초기화 구간이 생김","detail":"범위가 도착하기 전 체크박스 조작 시 dueLimit()이 잘못 판정할 수 있다. 로딩 후 활성화하거나 안전한 기본 처리가 필요하다."},{"title":"오류 문구 통일 시 한 경로의 문구가 미세하게 바뀜","detail":"서비스는 마침표 없음, 컨트롤러는 마침표 있음. 화면 문구(마침표 있음)에 맞춰 통일하되 '문구 불변' 요구와의 차이를 test가 확인해야 한다."}],"notChecked":[{"item":"실행 중인 앱이 현재 코드로 빌드됐는지","reason":"앱을 새로 띄우지 않는 규칙이라 확인하지 않음"},{"item":"order-detail.js 등 dueDays 소비 코드의 세부 동작","reason":"읽기 검색으로 이름 기반 접근만 확인, 실행 검증은 test 단계 몫"}]};
+</script>
+<script>
+(function () {
+  var view = document.getElementById('view');
+  var LEVEL = { '없음': 'none', '낮음': 'low', '중간': 'mid', '높음': 'high' };
+  var KIND = { '추가': 'add', '변경': 'change', '충돌': 'conflict', '차이 없음': 'none' };
+
+  // 데이터는 모두 textContent 로 넣는다(문자열을 HTML 로 해석하지 않는다).
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+  function arr(x) { return Array.isArray(x) ? x : []; }
+  function badge(text, cls) { return el('span', 'badge ' + cls, text); }
+  function card(num, title, extra) {
+    var c = el('section', 'card' + (extra ? ' ' + extra : ''));
+    var h = el('h2');
+    if (num) h.appendChild(el('span', 'step', String(num)));
+    h.appendChild(document.createTextNode(title));
+    c.appendChild(h);
+    return c;
+  }
+  function list(items) {
+    var ul = el('ul');
+    items.forEach(function (t) { ul.appendChild(el('li', null, t)); });
+    return ul;
+  }
+  function label(parent, text) { parent.appendChild(el('div', 'label', text)); }
+  function table(headers, rows) {
+    var t = el('table');
+    var thead = el('thead'), hr = el('tr');
+    headers.forEach(function (x) { hr.appendChild(el('th', null, x)); });
+    thead.appendChild(hr); t.appendChild(thead);
+    var tb = el('tbody');
+    rows.forEach(function (cells) {
+      var tr = el('tr');
+      cells.forEach(function (c) {
+        var td = el('td');
+        if (c && c.nodeType) td.appendChild(c); else td.textContent = c === undefined || c === null ? '' : c;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    return t;
+  }
+  function codeCell(text) { return text ? el('code', null, text) : ''; }
+
+  function render(r) {
+    view.textContent = '';
+    var vd = r.verdict || {};
+    var status = vd.status === 'HILP' ? 'HILP' : 'READY';
+    document.title = '사전 점검 보고서 - ' + (r.id || r.createdAt || '');
+    document.getElementById('sub').textContent =
+      '구현 전에 요청의 이해, 현재 상태, 영향 범위, 위험을 점검한 요약입니다. (' + (r.id || '') + (r.createdAt ? ' · ' + r.createdAt : '') + ')';
+
+    // 1. 판정 (맨 위)
+    var vc = card(null, '판정', 'verdict ' + status);
+    var head = el('div', 'verdict-head');
+    head.appendChild(el('span', 'verdict-dot ' + status));
+    head.appendChild(el('span', 'verdict-name ' + status, status));
+    vc.appendChild(head);
+    vc.appendChild(el('p', 'verdict-reason', vd.reason || ''));
+    if (r.previous && (r.previous.task_id || r.previous.failure)) {
+      vc.appendChild(el('div', 'prev', '이전 라운드 ' + (r.previous.task_id || '') + ' — ' + (r.previous.failure || '')));
+    }
+    view.appendChild(vc);
+
+    // 2. 요청 요약과 배경·목적
+    var rc = card(2, '요청과 이해한 내용');
+    rc.appendChild(el('div', 'req', r.request || ''));
+    var u = r.understanding || {};
+    var pair = el('div', 'pair');
+    var b1 = el('div'); b1.appendChild(el('b', null, '배경')); b1.appendChild(document.createTextNode(u.background || '')); pair.appendChild(b1);
+    var b2 = el('div'); b2.appendChild(el('b', null, '목적')); b2.appendChild(document.createTextNode(u.purpose || '')); pair.appendChild(b2);
+    rc.appendChild(pair);
+    view.appendChild(rc);
+
+    // 3. 점검 표
+    if (arr(r.checks).length) {
+      var cc = card(3, '점검 표');
+      cc.appendChild(table(['항목', '결과', '근거(명령어)'], r.checks.map(function (c) {
+        return [c.item, c.result, codeCell(c.command)];
+      })));
+      view.appendChild(cc);
+    }
+
+    // 4. PRD 와 달라지는 부분
+    var pc = card(4, 'PRD와 달라지는 부분');
+    if (arr(r.prdDiff).length) {
+      pc.appendChild(table(['항목', 'PRD 내용', '이번 요청', '구분'], r.prdDiff.map(function (d) {
+        var k = d.kind || '차이 없음';
+        return [d.item, d.prd, d.request, badge(k, KIND[k] || 'none')];
+      })));
+    } else {
+      pc.appendChild(el('p', 'none-text', '차이 없음'));
+    }
+    view.appendChild(pc);
+
+    // 5. 영향도 분석
+    var im = r.impact || {};
+    var ic = card(5, '영향도 분석');
+    if (im.overall) {
+      var ov = el('div', 'overall');
+      ov.appendChild(document.createTextNode('종합 등급'));
+      ov.appendChild(badge(im.overall.level || '?', LEVEL[im.overall.level] || 'mid'));
+      ov.appendChild(el('span', 'meta', im.overall.reason || ''));
+      ic.appendChild(ov);
+    }
+    if (arr(im.areas).length) {
+      label(ic, '영역별 영향도');
+      ic.appendChild(table(['영역', '영향도', '근거'], im.areas.map(function (a) {
+        return [a.area, badge(a.level || '?', LEVEL[a.level] || 'mid'), a.note];
+      })));
+    }
+    if (arr(im.direct).length) {
+      label(ic, '직접 영향');
+      ic.appendChild(table(['대상', '변경 내용'], im.direct.map(function (d) { return [codeCell(d.item), d.change]; })));
+    }
+    if (arr(im.indirect).length) {
+      label(ic, '간접 영향');
+      ic.appendChild(table(['대상', '영향받는 이유'], im.indirect.map(function (d) { return [codeCell(d.item), d.reason]; })));
+    }
+    if (arr(im.tests).length) {
+      label(ic, '영향받을 수 있는 기존 테스트');
+      ic.appendChild(table(['테스트', '갱신 필요 여부'], im.tests.map(function (d) { return [codeCell(d.file), d.note]; })));
+    }
+    label(ic, 'INTENT 확인');
+    if (arr(im.intent).length) ic.appendChild(list(im.intent)); else ic.appendChild(el('div', 'none-text', '해당 없음'));
+    view.appendChild(ic);
+
+    // 6. 경고(Risk) — 있을 때만
+    if (arr(r.risks).length) {
+      var kc = card(6, '경고 (Risk)');
+      r.risks.forEach(function (k) {
+        var d = el('div', 'risk');
+        d.appendChild(el('b', null, k.title || ''));
+        if (k.detail) d.appendChild(el('div', null, k.detail));
+        kc.appendChild(d);
+      });
+      view.appendChild(kc);
+    }
+
+    // 7. 확인하지 못한 것
+    var nc = card(arr(r.risks).length ? 7 : 6, '확인하지 못한 것');
+    if (arr(r.notChecked).length) {
+      nc.appendChild(table(['항목', '이유'], r.notChecked.map(function (n) { return [n.item, n.reason]; })));
+    } else {
+      nc.appendChild(el('p', 'none-text', '없음'));
+    }
+    view.appendChild(nc);
+  }
+
+  if (!report) {
+    view.appendChild(el('p', 'none-text', '보고서 데이터가 없습니다. 이 파일은 템플릿입니다.'));
+    return;
+  }
+  render(report);
+})();
+</script>
+</body>
+</html>

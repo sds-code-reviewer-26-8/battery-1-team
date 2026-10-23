@@ -43,7 +43,10 @@ public class OrderService {
 	 */
 	@Transactional
 	public Order confirm(Map<Country, Integer> requested, String routeType, long masterVersion, String memo,
-			String customerName, String user) {
+			String customerName, Integer dueDays, String user) {
+		if (dueDays != null && !DueDays.inRange(dueDays)) {
+			throw new BusinessException(DueDays.MESSAGE);
+		}
 		SimulationResult result = simulationService.simulate(requested);
 		if (result.master().version() != masterVersion) {
 			throw new BusinessException("시뮬레이션 이후 마스터 데이터가 바뀌었습니다. 다시 시뮬레이션해 주세요", true);
@@ -63,7 +66,7 @@ public class OrderService {
 		LocalDateTime now = LocalDateTime.now();
 		Order order = orders.save(new Order(now, user, totalK, plan.type(), plan.label(), plan.totalDays(),
 				plan.productionCost(), plan.shippingCost(), plan.totalCost(), note, normalizeCustomerName(customerName),
-				json.writeValueAsString(stored)));
+				json.writeValueAsString(stored), dueDays));
 		histories.save(new OrderStatusHistory(order.getId(), null, OrderStatus.CONFIRMED, user, now));
 		return order;
 	}

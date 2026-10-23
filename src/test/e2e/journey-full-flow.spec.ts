@@ -58,5 +58,5 @@ test('JRN-01-TC01 로그인부터 완료까지 주문 한 건 처리', async ({ 
 	// 9. 주문 목록에서 상태 확인
 	await page.locator('.topbar nav').getByRole('link', { name: '주문 목록' }).click();
 	const row = page.locator('table.grid tbody tr', { has: page.getByRole('link', { name: `#${orderId}`, exact: true }) });
-	await expect(row.locator('td:nth-child(7)')).toHaveText('완료');
+	await expect(row.locator('td:nth-child(8)')).toHaveText('완료');
 });
