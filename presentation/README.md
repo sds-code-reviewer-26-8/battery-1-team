@@ -6,13 +6,13 @@
   - 영상/이미지는 presentation/assets/ 에 넣고 상대 경로로 링크하세요.
 -->
 
-# [팀명]
+# [방전금지]
 
 | 항목 | 내용 |
 |---|---|
 | 팀장 | 권웅기 |
 | 팀원 | 권웅기, 김도현, 김재연, 김준영 |
-| 발표자 | ___ |
+| 발표자 | 김도현 |
 | PRD.md 링크 | [PRD.md](https://github.com/sds-code-reviewer-26-8/battery-1-team/blob/main/docs/PRD.md) |
 | INTENT.md 링크 | [INTENT.md](https://github.com/sds-code-reviewer-26-8/battery-1-team/blob/main/docs/INTENT.md) |
 
