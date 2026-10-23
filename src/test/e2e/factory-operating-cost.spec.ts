@@ -77,6 +77,7 @@ test.describe('공장 운영비', () => {
     expect(Math.abs(total - (production + shipping + eokNumber(operatingText)))).toBeLessThanOrEqual(0.011);
 
     await page.goto('/orders');
+    await expect(page.getByRole('link', { name: `#${id}`, exact: true })).toBeVisible();
     const cells = await listRowCells(page, id);
     expect(cells[6]).toBe(total.toFixed(2)); // 총 비용(억원)
   });
